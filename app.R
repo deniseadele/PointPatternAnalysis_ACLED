@@ -16,7 +16,11 @@ packages <- c('shiny',
               'maptools',
               'rgdal',
               'spatstat',
-              'sp')
+              'sp',
+              'ggplot2',
+              'anytime',
+              'plyr',
+              'zoo')
 
 for (p in packages){
     if (!require(p,character.only=T)){
@@ -88,24 +92,34 @@ sidebar <- dashboardSidebar(
 explore <- tabItem(
     tabName = "explore",
     fluidRow(
-        column(width = 9,
-               leafletOutput("tmap_overview")
-        ),
-        column(width = 3,
-               box(width = NULL, status = "warning",
-                   checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
-                                      choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                      selected = c("Protests")
-                   )
-               ),
-               
-               box(width = NULL, status = "warning",
-                   checkboxGroupInput("select_country", "Filter countries:",
-                                      choices = c(as.vector(sort(unique(SA_df$country)))),
-                                      selected = c("Pakistan")
-                   )
-               )
+        tabBox(
+            width = NULL,
+            title = "", height= "650px",
+            tabPanel("Overall Map-view",
+                     column(width = 9,
+                            leafletOutput("tmap_overview")
+                     ),
+                     column(width = 3,
+                            box(width = NULL, status = "warning",
+                                checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
+                                                   choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                   selected = c("Protests")
+                                )
+                            ),
+                            
+                            box(width = NULL, status = "warning",
+                                checkboxGroupInput("select_country", "Filter countries:",
+                                                   choices = c(as.vector(sort(unique(SA_df$country)))),
+                                                   selected = c("Pakistan")
+                                )
+                            )
+                     )),
+            tabPanel("Calendar Chart",
+                     column(width = 12,
+                            plotlyOutput("calendar_view")
+                     ))
         )
+        
     )
 )
 
@@ -117,7 +131,7 @@ pointpattern <- tabItem(
                    selectInput("select_country2", "Select Country:", 
                                choices = c(as.vector(sort(unique(SA_df$country)))),
                                selected = c("Pakistan")
-                               )
+                   )
             ),
             column(width = 6,
                    selectInput("select_state", "Select States:",
@@ -153,33 +167,33 @@ pointpattern <- tabItem(
                          column(width = 4,
                                 box(width = NULL, status = "warning", title = "Nearest-neighbour", solidHeader = TRUE,
                                     plotOutput("nnd_plot", height = 250)
-                                    ),
+                                ),
                                 box(width = NULL, status = "warning", title = "F function", solidHeader = TRUE,
                                     plotOutput("Ffunction", height = 250)
-                                    )
-                                ),
+                                )
+                         ),
                          column(width = 4,
                                 box(width = NULL, status = "warning", title = "G function", solidHeader = TRUE,
                                     plotOutput("Gfunction", height = 250)
-                                    ),
+                                ),
                                 box(width = NULL, status = "warning", title = "K function", solidHeader = TRUE,
                                     plotOutput("Kfunction", height = 250)
-                                    )
-                                ),
+                                )
+                         ),
                          column(width = 4,
                                 box(width = NULL, status = "warning",
                                     radioButtons("select_eventtype3", "Select Conflict Type:", 
                                                  choices = c(as.vector(sort(unique(SA_df$event_type)))),
                                                  selected = c("Protests")
-                                                 )
-                                    ),
+                                    )
+                                ),
                                 box(width = NULL, status = "warning",
                                     sliderInput("select_nsim", "# Monte Carlo Simulation:",
                                                 min = 0, max = 100, value = 49
-                                                 )
                                     )
                                 )
                          )
+                     )
             ),
             tabPanel("Multitype", 
                      h3("Multitype Point Patterns"),
@@ -197,10 +211,10 @@ pointpattern <- tabItem(
                          column(width = 2,
                                 box(width = NULL, status = "warning",
                                     selectizeInput("select_pairtypes", "Select pairs of types",
-                                                options = list(maxItems = 2),
-                                                choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                                selected = c("Protests","Riots"),
-                                                multiple = TRUE)
+                                                   options = list(maxItems = 2),
+                                                   choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                   selected = c("Protests","Riots"),
+                                                   multiple = TRUE)
                                 ),
                                 box(width = NULL, status = "warning",
                                     radioButtons("select_function", "Select Summary Function:", 
@@ -322,7 +336,7 @@ server <- function(input, output, session) {
     
     ssh <- reactive({
         sh()[sh()@data$NAME_1 %in% c(as.vector(input$select_state)), ]
-        })
+    })
     poly <- reactive({
         as(ssh(), "SpatialPolygons")
     })
@@ -338,7 +352,7 @@ server <- function(input, output, session) {
     ppp <- reactive({
         country_ppp()[owin()]
     })
-
+    
     
     output$tmap_kd <- renderLeaflet({
         
@@ -370,6 +384,26 @@ server <- function(input, output, session) {
         plot(Gcsr, xaxt="n", xlim = c(0,13208))
     })
     
+    output$calendar_view <- renderPlotly({
+        ACLED_clean <- aggregate(ACLED_SA, by = list(ACLED_SA$event_date), FUN = length)
+        colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"Events"
+        
+        ACLED_clean$weekday = as.POSIXlt(anydate(ACLED_clean$Group.1))$wday
+        ACLED_clean$weekdayf<-factor(ACLED_clean$weekday,levels=rev(0:6),labels=rev(c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),ordered=TRUE) #converting the day no. to factor 
+        ACLED_clean$monthf<-factor(month(anydate(ACLED_clean$Group.1)),levels=as.character(1:12),
+                                   labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),ordered=TRUE) # finding the month 
+        ACLED_clean$yearmonth<- factor(as.yearmon(anydate(ACLED_clean$Group.1))) #finding the year and the month from the date. Eg: Nov 2018 
+        ACLED_clean$week <- as.numeric(format(anydate(ACLED_clean$Group.1),"%W")) #finding the week of the year for each date                           
+        ACLED_clean<-ddply(ACLED_clean,.(yearmonth),transform,monthweek=1+week-min(week)) #normalizing the week to start at 1 for every month 
+        
+        ggplot(ACLED_clean, aes(monthweek, weekdayf, fill = Events)) + 
+            geom_tile(colour = "white") + 
+            facet_grid(year(anydate(ACLED_clean$Group.1))~monthf) + 
+            scale_fill_gradient(low="red", high="green") + 
+            xlab("Week of Month") + ylab("Day of Week") + 
+            labs(fill = "No. of Events") 
+        
+    })
     
     output$Ffunction <- renderPlot({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
@@ -394,8 +428,8 @@ server <- function(input, output, session) {
                          j, 
                          W=owin())
         plot(X, main= NULL)
-
-
+        
+        
     })
     
     output$summaryfunction <- renderPlot({
