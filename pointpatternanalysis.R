@@ -16,7 +16,8 @@ packages <- c('shiny',
               'maptools',
               'rgdal',
               'spatstat',
-              'sp')
+              'sp',
+              'corrplot')
 
 for (p in packages){
   if (!require(p,character.only=T)){
@@ -80,15 +81,13 @@ tmap_leaflet(tmap_kd)
 
 
 ### SECOND-ORDER ###
-# is there a need to remove duplicated points?
-# what if the records are independent events?
 duplicated(PAK_ppp)
 
 PAK_ppp_unique <- unique(PAK_ppp)    #eliminate duplicate point events
 duplicated(PAK_ppp_unique)
 
 ## Conduct all the 2nd order test using Pakistan ppp object
-# Nearest K neighbour
+# Nearest neighbour
 nnd_PAK <- nndist(PAK_ppp_unique)
 hist(nnd_PAK, breaks=20)
 
@@ -111,89 +110,99 @@ aggregate(nnd_marks, by=list(from=marks(PAK_ppp_unique)), mean)
 # An R less than 1 that is statistically significant indicates clustering.
 clarkevans.test(PAK_ppp_unique)
 
-unique(marks(PAK_ppp_unique))
-for (i in unique(marks(PAK_ppp_unique))){
-  assign(paste0(i,"_ppp_u"), subset(PAK_ppp_unique, marks == i, drop=TRUE))
-}
-
-# G function
-# i think the area is too big... ):
-G <- Gest(Protests_ppp_u, correction = "border") 
-plot(G, cbind(km, rs, theo) ~ r, xaxt="n", xlim = c(0,13208))
-G_csr <- envelope(Protests_ppp_u, Gest, nsim = 49)
-plot(G_csr)
-
-# K function
-
-K <- Kest(PAK_ppp, correction="Ripley")   # code taking too long to run and aborted
-
-# guard zone correction, which we specify using correction = "border" in the envelope() function. 
-#envK <- envelope(PAK_ppp, fun = Kest, correction="border", nsim = 49)
-
-unique(PAK_sh$GID_1)
-for (i in unique(PAK_sh$GID_1)){
-  sh <- PAK_sh[PAK_sh@data$GID_1 == i,] 
-  poly = as(sh, "SpatialPolygons")
-  poly <- spTransform(poly, CRS=CRS("+init=epsg:24313"))
-  owin <- maptools::as.owin.SpatialPolygons(poly)
-  assign(paste0(i,"_ppp"), PAK_ppp[owin])
-}
 
 
-### Conduct all the 2nd order test###
-# Nearest K neighbour
-nnd <- nndist(PAK.1_1_ppp)
+# 2nd order analysis on one state and one event type
+sh2 <- PAK_sh[PAK_sh@data$NAME_1 == "Sind",] 
+poly2 = as(sh2, "SpatialPolygons")
+poly2 <- spTransform(poly2, CRS=CRS("+init=epsg:24313"))
+owin2 <- maptools::as.owin.SpatialPolygons(poly2)
+ppp <- PAK_ppp[owin2]
+ppp_u <- unique(ppp)
+ppp_u_mark <- subset(ppp_u, marks == "Protests")#, drop=TRUE)
+
+# Nearest neighbour
+nnd <- nndist(ppp_u_mark )
 hist(nnd, breaks=20)
 
 # second nearest neighbours
-nnd2 <- nndist(PAK.1_1_ppp, k=2)
+nnd2 <- nndist(ppp_u_mark , k=2)
 
 # first, second and third nearest
-nnd1to3 <- nndist(PAK.1_1_ppp, k=1:3)
+nnd1to3 <- nndist(ppp_u_mark , k=1:3)
 head(nnd1to3)
 
-# distance to nearest neighbour of each type
-nndm <- nndist(PAK.1_1_ppp, by=marks(PAK.1_1_ppp)) 
-
-# _mean_ nearest neighbour distances
-aggregate(nndm, by=list(from=marks(PAK.1_1_ppp)), mean)
-
-
 # G function
-# can use different types of correction? but 
-G <- Gest(PAK.1_1_ppp, correction = "border") 
-plot(Gcsr, xaxt="n", xlim = c(0,13208)) 
-# plot(G, cbind(km,theo,rs) ~ r, xaxt="n", xlim = c(0,13208))
 
-Gcsr <- envelope(PAK.1_1_ppp, Gest, correction = c("best"), nsim = 99)
-plot(Gcsr, xaxt="n", xlim = c(0,13208))
+G <- Gest(ppp_u_mark , correction = "border") 
+plot(G, cbind(km, rs, theo) ~ r, xaxt="n", xlim = c(0,13208))
+G_csr <- envelope(ppp_u_mark , Gest, nsim = 49)
+plot(G_csr)
 
-G <- Gest(PAK.1_1_ppp, correction = "all") 
-plot(G, xaxt="n", xlim = c(0,13208))
 
 # F function
-Ftest <- Fest(PAK.1_1_ppp)
+Ftest <- Fest(ppp_u_mark)
 plot(Ftest)
 
-Fcsr <- envelope(PAK.1_1_ppp, Fest, nsim = 99)
+Fcsr <- envelope(ppp_u_mark, Fest, nsim = 99)
 plot(Fcsr)
 
 # K function
-ktest_ <- Kest(PAK.1_1_ppp) # takes awhile to load
+ktest_ <- Kest(ppp_u_mark) # takes awhile to load
 plot(ktest_, main ="Plots all")
 
-ktest_R <- Kest(PAK.1_1_ppp, correction="Ripley")
-plot(ktest_R, main ="Ripley")
-
-ktest_b <- Kest(PAK.1_1_ppp, correction="border")
-plot(ktest_b, main ="border")
-
-ktest_b <- Kest(PAK.1_1_ppp, correction="isotropic")
-plot(ktest_b, main ="isotropic") # same as Ripley
-
-Kcsr <- envelope(PAK.1_1_ppp, Kest, nsim = 99)
+Kcsr <- envelope(ppp_u_mark, Kest, nsim = 99)
 plot(Kcsr)
 
 # All stats 
 # NOTE: this function is only applicable to unmarked patterns
-plot(allstats(PAK.1_1_ppp))
+plot(allstats(ppp_u_mark))
+
+
+# k-cross function??
+ppp_u_marks <- subset(ppp_u, marks %in% c("Protests","Riots"))
+kcross <- Kcross(ppp_u, i="Protests",j="Riots") 
+plot(kcross)
+
+kmult <- envelope(ppp_u, fun=Kcross, nsim=19, i="Protests",j="Riots")
+plot(kmult)
+
+
+ppp_u_m <- split(ppp_u)
+plot(ppp_u[marks(ppp_u)%in% c('Protests','Riots')])
+v<-c('Protests','Riots')
+i <- ppp_u_m[,"Protests"]
+j <- ppp_u_m[,v[2]]
+
+mycolor= c("goldenrod", "darkblue")
+X <- superimpose(Protests=ppp_u_m$Battles, Riots=ppp_u_m$Riots, W=owin2)
+plot(X, main="Marked Point Patterns",col="white")
+points(X, col = alpha(mycolor, 0.4), pch=16)
+
+
+#ppp_u_rescale <- rescale(ppp_u)
+#kcross <- envelope(ppp_u_rescale, Kcross, nsim=19, i="Protests", j="Riots",
+#                simulate=expression(rshift(ppp_u_rescale, radius=150)))
+
+# nearest neighbour
+nndm <- nndist(X, by=marks(X))
+plot(nndm)
+
+nndm2 <- nndist(ppp_u, by=marks(ppp_u))
+M <- cor(nndm2)
+corrplot(M, method = "ellipse")
+
+nndm_g <- as.data.frame(nndm) %>% gather(key="Event_type",value="dist",1:2)
+head(nndm_g,3)
+
+
+nndm_g <- nndm_g %>% mutate(id = row_number())
+
+nndm_g_bg <- nndm_g[, -1]
+ggplot(nndm_g, aes(x = dist, fill = Event_type)) +
+  geom_histogram(data = nndm_g_bg, fill = "grey", alpha = .5) +
+  geom_histogram(colour = "black") +
+  facet_wrap(~ Event_type)
+
+
+nncorr(X)

@@ -112,13 +112,30 @@ explore <- tabItem(
 pointpattern <- tabItem(
     tabName = "pointpattern",
     fluidRow(
+        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Global Filters: Region",
+            column(width = 6,
+                   selectInput("select_country2", "Select Country:", 
+                               choices = c(as.vector(sort(unique(SA_df$country)))),
+                               selected = c("Pakistan")
+                               )
+            ),
+            column(width = 6,
+                   selectInput("select_state", "Select States:",
+                               choices = c(as.vector(sort(unique(SA_df$country)))),
+                               selected = c(as.vector(sort(unique(SA_df$country)))),
+                               multiple = TRUE)
+            )
+        )
+    ),
+    
+    fluidRow(
         tabBox(
             width = NULL,
             title = "", height= "650px",
             tabPanel("First-order",
                      
-                     h1("First-order analysis"),
-                     h2("Kernel Density Estimation"),
+                     h3("First-order analysis"),
+                     h4("Kernel Density Estimation"),
                      column(width = 9,
                             leafletOutput("tmap_kd")
                      ),
@@ -127,39 +144,84 @@ pointpattern <- tabItem(
                                 radioButtons("select_eventtype2", "Select Conflict Type:", 
                                              choices = c(as.vector(sort(unique(SA_df$event_type)))),
                                              selected = c("Protests")) 
-                            ),
-                            box(width = NULL, status = "warning",
-                                radioButtons("select_country2", "Select Conflict Type:", 
-                                             choices = c(as.vector(sort(unique(SA_df$country)))),
-                                             selected = c("Pakistan"))
                             )
-                            
                      )
             ),
-            tabPanel("Second_order", 
-                     h1("Second-order analysis"),
+            tabPanel("Second-order", 
+                     h3("Second-order analysis"),
                      fluidRow(
                          column(width = 4,
                                 box(width = NULL, status = "warning", title = "Nearest-neighbour", solidHeader = TRUE,
                                     plotOutput("nnd_plot", height = 250)
-                                )),
+                                    ),
+                                box(width = NULL, status = "warning", title = "F function", solidHeader = TRUE,
+                                    plotOutput("Ffunction", height = 250)
+                                    )
+                                ),
                          column(width = 4,
                                 box(width = NULL, status = "warning", title = "G function", solidHeader = TRUE,
                                     plotOutput("Gfunction", height = 250)
-                                )),
+                                    ),
+                                box(width = NULL, status = "warning", title = "K function", solidHeader = TRUE,
+                                    plotOutput("Kfunction", height = 250)
+                                    )
+                                ),
                          column(width = 4,
                                 box(width = NULL, status = "warning",
-                                    radioButtons("select_state2", "Filter by states:", 
-                                                 choices = c(as.vector(sort(PAK_sh@data$NAME_1))),
-                                                 selected = c("Azad Kashmir")) 
+                                    radioButtons("select_eventtype3", "Select Conflict Type:", 
+                                                 choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                 selected = c("Protests")
+                                                 )
+                                    ),
+                                box(width = NULL, status = "warning",
+                                    sliderInput("select_nsim", "# Monte Carlo Simulation:",
+                                                min = 0, max = 100, value = 49
+                                                 )
+                                    )
                                 )
                          )
-                         
+            ),
+            tabPanel("Multitype", 
+                     h3("Multitype Point Patterns"),
+                     fluidRow(
+                         column(width = 5,
+                                box(width = NULL, status = "warning", title = "Marked Point Patterns", solidHeader = TRUE,
+                                    plotOutput("mpp_plot", height = 320)
+                                )
+                         ),
+                         column(width = 5,
+                                box(width = NULL, status = "warning", title = "Summary Functions", solidHeader = TRUE,
+                                    plotOutput("summaryfunction", height = 320)
+                                )
+                         ),
+                         column(width = 2,
+                                box(width = NULL, status = "warning",
+                                    selectizeInput("select_pairtypes", "Select pairs of types",
+                                                options = list(maxItems = 2),
+                                                choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                selected = c("Protests","Riots"),
+                                                multiple = TRUE)
+                                ),
+                                box(width = NULL, status = "warning",
+                                    radioButtons("select_function", "Select Summary Function:", 
+                                                 choices = c("K function",
+                                                             "G function",
+                                                             "J function"),
+                                                 selected = c("K function")
+                                    )
+                                ),
+                                box(width = NULL, status = "warning",
+                                    sliderInput("select_nsim2", "# Monte Carlo Simulation:",
+                                                min = 0, max = 50, value = 19
+                                    )
+                                )
+                         )
                      )
             )
         )
     )
 )
+
 
 
 body <- dashboardBody(
@@ -174,9 +236,27 @@ body <- dashboardBody(
 
 ui <- dashboardPage(header, sidebar, body)
 
-server <- function(input, output) {
+server <- function(input, output, session) {
     
-    
+    observe({
+        
+        if (input$select_country2=="Pakistan") {
+            x <- as.vector(sort(PAK_sh@data$NAME_1))
+        } else if (input$select_country2=="Bangladesh") {
+            x <- as.vector(sort(BGD_sh@data$NAME_1))
+        } else if (input$select_country2=="Sri Lanka") {
+            x <- as.vector(sort(LKA_sh@data$NAME_1))
+        } else if (input$select_country2=="Nepal") {
+            x <- as.vector(sort(NPL_sh@data$NAME_1))
+        } else {
+            x <- as.vector(sort(IND_sh@data$NAME_1))
+        }
+        
+        updateSelectInput(session, "select_state",
+                          choices = x,
+                          selected = head(x,1)
+        )
+    })
     
     
     output$tmap_overview <- renderLeaflet({
@@ -212,35 +292,61 @@ server <- function(input, output) {
         
     })
     
+    sh <- reactive({
+        if (input$select_country2=="Pakistan") {
+            PAK_sh
+        } else if (input$select_country2=="Bangladesh") {
+            BGD_sh
+        } else if (input$select_country2=="Sri Lanka") {
+            LKA_sh
+        } else if (input$select_country2=="Nepal") {
+            NPL_sh
+        } else {
+            IND_sh
+        }
+    })
+    
+    country_ppp <- reactive({
+        if (input$select_country2=="Pakistan") {
+            PAK_ppp
+        } else if (input$select_country2=="Bangladesh") {
+            BGD_ppp
+        } else if (input$select_country2=="Sri Lanka") {
+            LKA_ppp
+        } else if (input$select_country2=="Nepal") {
+            NPL_ppp
+        } else {
+            IND_ppp
+        }
+    })
+    
+    ssh <- reactive({
+        sh()[sh()@data$NAME_1 %in% c(as.vector(input$select_state)), ]
+        })
+    poly <- reactive({
+        as(ssh(), "SpatialPolygons")
+    })
+    
+    poly2 <- reactive({
+        spTransform(poly(), CRS=CRS("+init=epsg:24313"))
+    })
+    
+    owin <- reactive({
+        maptools::as.owin.SpatialPolygons(poly2())
+    })
+    
+    ppp <- reactive({
+        country_ppp()[owin()]
+    })
+
     
     output$tmap_kd <- renderLeaflet({
-        if (input$select_country2=="Pakistan") {
-            sh <- PAK_sh
-            country_ppp <- PAK_ppp
-        } else if (input$select_country2=="Bangladesh") {
-            sh <- BGD_sh
-            country_ppp <- BGD_ppp
-        } else if (input$select_country2=="Sri Lanka") {
-            sh <- LKA_sh
-            country_ppp <- LKA_ppp
-        } else if (input$select_country2=="Nepal") {
-            sh <- NPL_sh
-            country_ppp <- NPL_ppp
-        } else {
-            sh <- IND_sh
-            country_ppp <- IND_ppp
-        }
         
-         
-        poly = as(sh, "SpatialPolygons")
-        poly <- spTransform(poly, CRS=CRS("+init=epsg:24313"))
-        owin <- maptools::as.owin.SpatialPolygons(poly)
-        ppp <- country_ppp[owin]
-        ppp_marks <- subset(ppp, marks == input$select_eventtype2) 
+        ppp_marks <- subset(ppp(), marks == input$select_eventtype2) 
         kd <- density(ppp_marks)
         ras <- raster(kd, crs="+init=epsg:24313")
         
-        shape <- spTransform(sh, CRS=CRS("+init=epsg:24313"))
+        shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313"))
         tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = "quantile", n = 20, palette=viridisLite::magma(7)) +
             tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
             tm_shape(shape) +
@@ -250,24 +356,59 @@ server <- function(input, output) {
     })
     
     output$nnd_plot <- renderPlot({
-        sh <- PAK_sh[PAK_sh@data$NAME_1 %in% c(as.vector(input$select_state2)), ] 
-        poly <- as(sh, "SpatialPolygons")
-        poly <- spTransform(poly, CRS=CRS("+init=epsg:24313"))
-        owin <- maptools::as.owin.SpatialPolygons(poly)
-        ppp <- PAK_ppp[owin]
-        nnd <- nndist(ppp)
+        ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
+        ppp_marks_u <- unique(ppp_marks)
+        nnd <- nndist(ppp_marks_u)
         hist(nnd, breaks=20)
         
     })
     
     output$Gfunction <- renderPlot({
-        sh <- PAK_sh[PAK_sh@data$NAME_1 %in% c(as.vector(input$select_state2)), ] 
-        poly = as(sh, "SpatialPolygons")
-        poly <- spTransform(poly, CRS=CRS("+init=epsg:24313"))
-        owin <- maptools::as.owin.SpatialPolygons(poly)
-        ppp <- PAK_ppp[owin]
-        Gcsr <- envelope(ppp, Gest, correction = c("best"), nsim = 99)
+        ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
+        ppp_marks_u <- unique(ppp_marks)
+        Gcsr <- envelope(ppp_marks_u, Gest, correction = c("best"), nsim = input$select_nsim)
         plot(Gcsr, xaxt="n", xlim = c(0,13208))
+    })
+    
+    
+    output$Ffunction <- renderPlot({
+        ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
+        ppp_marks_u <- unique(ppp_marks)
+        Fcsr <- envelope(ppp_marks_u, Fest, nsim = input$select_nsim)
+        plot(Fcsr)
+    })
+    
+    output$Kfunction <- renderPlot({
+        ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
+        ppp_marks_u <- unique(ppp_marks)
+        Kcsr <- envelope(ppp_marks_u, Kest, nsim = input$select_nsim)
+        plot(Kcsr)
+    })
+    
+    output$mpp_plot <- renderPlot({
+        ppp_u <- unique(ppp())
+        ppp_u_m <- split(ppp_u)
+        i <- ppp_u_m[factor=input$select_pairtypes[1]]
+        j <- ppp_u_m[factor=input$select_pairtypes[2]]
+        X <- superimpose(i,
+                         j, 
+                         W=owin())
+        plot(X, main= NULL)
+
+
+    })
+    
+    output$summaryfunction <- renderPlot({
+        ppp_u <- unique(ppp())
+        if (input$select_function=="K function") {
+            cross_csr <- envelope(ppp_u, fun=Kcross, nsim=input$select_nsim2, i=input$select_pairtypes[1],j=input$select_pairtypes[2])
+        } else if (input$select_function=="G function") {
+            cross_csr <- envelope(ppp_u, fun=Gcross, nsim=input$select_nsim2, i=input$select_pairtypes[1],j=input$select_pairtypes[2])
+        } else {
+            cross_csr <- envelope(ppp_u, fun=Jcross, nsim=input$select_nsim2, i=input$select_pairtypes[1],j=input$select_pairtypes[2])
+        }
+        
+        plot(cross_csr, main=paste0(input$select_function))
     })
     
 }
