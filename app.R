@@ -20,7 +20,8 @@ packages <- c('shiny',
               'ggplot2',
               'anytime',
               'plyr',
-              'zoo')
+              'zoo',
+              'DT')
 
 for (p in packages){
     if (!require(p,character.only=T)){
@@ -94,26 +95,38 @@ explore <- tabItem(
     fluidRow(
         tabBox(
             width = NULL,
-            title = "", height= "650px",
-            tabPanel("Overall Map-view",
-                     column(width = 9,
-                            leafletOutput("tmap_overview")
+            title = "", height= "900px",
+            tabPanel("Overview",
+                     fluidRow(
+                         column(width = 9,
+                                h3("Point Symbol Map"),
+                                leafletOutput("tmap_overview"),
+                                p("Click the points on the map for more information about the event.")
+                         ),
+                         column(width = 3,
+                                box(width = NULL, status = "warning",
+                                    checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
+                                                       choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                       selected = c("Protests")
+                                    )
+                                ),
+                                
+                                box(width = NULL, status = "warning",
+                                    checkboxGroupInput("select_country", "Filter countries:",
+                                                       choices = c(as.vector(sort(unique(SA_df$country)))),
+                                                       selected = c("Pakistan")
+                                    )
+                                )
+                                
+                         )
                      ),
-                     column(width = 3,
-                            box(width = NULL, status = "warning",
-                                checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
-                                                   choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                                   selected = c("Protests")
-                                )
-                            ),
-                            
-                            box(width = NULL, status = "warning",
-                                checkboxGroupInput("select_country", "Filter countries:",
-                                                   choices = c(as.vector(sort(unique(SA_df$country)))),
-                                                   selected = c("Pakistan")
-                                )
-                            )
-                     )),
+                     fluidRow(
+                         column(width = 12,
+                                h4("Explore the data!"),
+                                DT::dataTableOutput("datatable")
+                         )
+                     )
+                     ),
             tabPanel("Calendar Chart",
                      column(width = 12,
                             plotlyOutput("calendar_view")
@@ -302,8 +315,21 @@ server <- function(input, output, session) {
                     id= "data_id",
                     popup.vars= c("Country:"="country", "State/Province:"="admin1","Event Type"="event_type","Sub-Event Type"="sub_event_type","Primary actor"="actor1"))
         tmap_leaflet(tm_SA)
-        
-        
+    })
+    
+    output$datatable <- DT::renderDataTable({
+        DT::datatable(data = SA_df %>% 
+                          filter(country %in% input$select_country, event_type %in% input$select_eventtype1)  %>% 
+                          dplyr::select(data_id, event_date, event_type, actor1, country, admin1, location, fatalities),
+                      options = list(pageLength = 5,
+                                     lengthMenu = c(5, 10, 15, 20),
+                                     initComplete = JS(
+                                         "function(settings, json) {",
+                                         "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
+                                         "}")),
+                      selection = list(target = 'row+column'),
+                      rownames=FALSE)
+
     })
     
     sh <- reactive({
@@ -368,6 +394,7 @@ server <- function(input, output, session) {
             tm_fill(col="NAME_1", alpha=0, id="NAME_1", title= "State",legend.show=FALSE)
         tmap_leaflet(tmap_kd)
     })
+    
     
     output$nnd_plot <- renderPlot({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
