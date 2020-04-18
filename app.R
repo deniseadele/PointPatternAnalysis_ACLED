@@ -1,27 +1,4 @@
-packages <- c('shiny',
-              'shinydashboard',
-              'tidyverse',
-              'sf',
-              'RColorBrewer',
-              'viridis',
-              'GADMTools',
-              'tmap',
-              'leaflet',
-              'here',
-              'rnaturalearthdata',
-              'lubridate',
-              'plotly',
-              'htmltools',
-              'raster',
-              'maptools',
-              'rgdal',
-              'spatstat',
-              'sp',
-              'ggplot2',
-              'anytime',
-              'plyr',
-              'zoo',
-              'DT')
+packages <- c('shiny','shinydashboard','tidyverse','sf','RColorBrewer','viridis','GADMTools','tmap','leaflet','here','rnaturalearthdata','lubridate','plotly','htmltools','raster','maptools','rgdal','spatstat','sp','ggplot2','anytime','plyr','zoo','DT')
 
 for (p in packages){
     if (!require(p,character.only=T)){
@@ -29,6 +6,34 @@ for (p in packages){
     }
     library(p, character.only=T)
 }
+
+
+library(rsconnect)
+library(shiny)
+library(shinydashboard)
+library(tidyverse)
+library(sf)
+library(RColorBrewer)
+library(viridis)
+library(GADMTools)
+library(tmap)
+library(leaflet)
+library(here)
+library(rnaturalearthdata)
+library(lubridate)
+library(plotly)
+library(htmltools)
+library(raster)
+library(maptools)
+library(rgdal)
+library(spatstat)
+library(sp)
+library(ggplot2)
+library(anytime)
+library(plyr)
+library(zoo)
+library(DT)
+
 
 # Reading the raw csv file as a tbl_df
 ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
@@ -368,7 +373,7 @@ server <- function(input, output, session) {
     })
     
     poly2 <- reactive({
-        spTransform(poly(), CRS=CRS("+init=epsg:24313"))
+        spTransform(poly(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
     })
     
     owin <- reactive({
@@ -384,9 +389,9 @@ server <- function(input, output, session) {
         
         ppp_marks <- subset(ppp(), marks == input$select_eventtype2) 
         kd <- density(ppp_marks)
-        ras <- raster(kd, crs="+init=epsg:24313")
+        ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
         
-        shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313"))
+        shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
         tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = "quantile", n = 20, palette=viridisLite::magma(7)) +
             tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
             tm_shape(shape) +
