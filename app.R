@@ -37,7 +37,7 @@ library(CGPfunctions)
 
 
 # Reading the raw csv file as a tbl_df
-ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
+#ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
 
 # Read in aspatial dataframe
 SA_df <- readRDS("Data/prepared_files/SA_df.rds")
@@ -132,7 +132,7 @@ explore <- tabItem(
                                 DT::dataTableOutput("datatable")
                          )
                      )
-                     ),
+            ),
             tabPanel("Ranking",
                      fluidRow(
                          column(width = 9,
@@ -141,8 +141,8 @@ explore <- tabItem(
                          column(width = 3,
                                 box(width = NULL, status = "warning",
                                     radioButtons("select_rank", "Compare by:",
-                                                       choices = c("fatalities","intensity"),
-                                                       selected = c("intensity")
+                                                 choices = c("fatalities","intensity"),
+                                                 selected = c("intensity")
                                     )
                                 )
                          )
@@ -237,7 +237,7 @@ pointpattern <- tabItem(
                                 )
                             )
                      )
-
+                     
             ),
             tabPanel("Multitype", 
                      h3("Multitype Point Patterns"),
@@ -279,6 +279,192 @@ pointpattern <- tabItem(
         )
     )
 )
+
+
+explore <- tabItem(
+    tabName = "explore",
+    fluidRow(
+        tabBox(
+            width = NULL,
+            title = "", height= "900px",
+            tabPanel("Overview",
+                     fluidRow(
+                         column(width = 9,
+                                h3("Point Symbol Map"),
+                                leafletOutput("tmap_overview"),
+                                p("Click the points on the map for more information about the event.")
+                         ),
+                         column(width = 3,
+                                box(width = NULL, status = "warning",
+                                    checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
+                                                       choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                       selected = c("Protests")
+                                    )
+                                ),
+                                
+                                box(width = NULL, status = "warning",
+                                    checkboxGroupInput("select_country", "Filter countries:",
+                                                       choices = c(as.vector(sort(unique(SA_df$country)))),
+                                                       selected = c("Pakistan")
+                                    )
+                                )
+                                
+                         )
+                     ),
+                     fluidRow(
+                         column(width = 12,
+                                h4("Explore the data!"),
+                                DT::dataTableOutput("datatable")
+                         )
+                     )
+            ),
+            tabPanel("Ranking",
+                     fluidRow(
+                         column(width = 9,
+                                plotOutput("slopegraph")
+                         ),
+                         column(width = 3,
+                                box(width = NULL, status = "warning",
+                                    radioButtons("select_rank", "Compare by:",
+                                                 choices = c("fatalities","intensity"),
+                                                 selected = c("intensity")
+                                    )
+                                )
+                         )
+                     )
+            ),
+            tabPanel("Calendar Chart",
+                     column(width = 12,
+                            plotlyOutput("calendar_view")
+                     ))
+        )
+        
+    )
+)
+
+pointpattern <- tabItem(
+    tabName = "pointpattern",
+    fluidRow(
+        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Global Filters: Region",
+            column(width = 6,
+                   selectInput("select_country2", "Select Country:", 
+                               choices = c(as.vector(sort(unique(SA_df$country)))),
+                               selected = c("Pakistan")
+                   )
+            ),
+            column(width = 6,
+                   selectInput("select_state", "Select States:",
+                               choices = c(as.vector(sort(unique(SA_df$country)))),
+                               selected = c(as.vector(sort(unique(SA_df$country)))),
+                               multiple = TRUE)
+            )
+        )
+    ),
+    
+    fluidRow(
+        tabBox(
+            width = NULL,
+            title = "", height= "650px",
+            tabPanel("First-order",
+                     
+                     h3("First-order analysis"),
+                     h4("Kernel Density Estimation"),
+                     column(width = 9,
+                            leafletOutput("tmap_kd")
+                     ),
+                     column(width = 3,
+                            box(width = NULL, status = "warning",
+                                radioButtons("select_eventtype2", "Select Conflict Type:", 
+                                             choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                             selected = c("Protests")) 
+                            )
+                     )
+            ),
+            tabPanel("Second-order", 
+                     h3("Second-order analysis"),
+                     column(width = 9,
+                            fluidRow(
+                                box(width = 6, status = "warning", title = "Distance Distribution", solidHeader = TRUE,
+                                    plotOutput("hist_plot", height = 300)),
+                                box(width = 6, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
+                                    plotOutput("env_function", height = 300))
+                            )
+                            #fluidRow(
+                            #    box(width = NULL, status = "warning", title = "Nearest-neighbour distance", solidHeader = T, collapsible =  T, collapsed = T,
+                            #        column(width = 6, plotOutput("nnd_plot", height = 250)),
+                            #        column(width=6, plotOutput("Gfunction", height = 250))
+                            #    )
+                            #),
+                            #fluidRow(
+                            #    box(width = NULL, status = "warning", title = "Empty-space distance", solidHeader = TRUE, collapsible =  T, collapsed = T,
+                            #        column(width=6, plotOutput("distmap", height = 250)),
+                            #        column(width=6, plotOutput("Ffunction", height = 250))
+                            #    )
+                            #)
+                     ),
+                     
+                     column(width = 3,
+                            box(width = NULL, status = "warning",
+                                radioButtons("select_disttype", "Select distance measure:", 
+                                             choices = c("Pairwise","Nearest-neighbour","Empty-space"),
+                                             selected = c("Pairwise")
+                                )
+                            ),
+                            box(width = NULL, status = "warning",
+                                radioButtons("select_eventtype3", "Select Conflict Type:", 
+                                             choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                             selected = c("Protests")
+                                )
+                            ),
+                            box(width = NULL, status = "warning",
+                                sliderInput("select_nsim", "# Monte Carlo Simulation:",
+                                            min = 0, max = 100, value = 49
+                                )
+                            )
+                     )
+                     
+            ),
+            tabPanel("Multitype", 
+                     h3("Multitype Point Patterns"),
+                     fluidRow(
+                         column(width = 5,
+                                box(width = NULL, status = "warning", title = "Marked Point Patterns", solidHeader = TRUE,
+                                    plotOutput("mpp_plot", height = 320)
+                                )
+                         ),
+                         column(width = 5,
+                                box(width = NULL, status = "warning", title = "Summary Functions", solidHeader = TRUE,
+                                    plotOutput("summaryfunction", height = 320)
+                                )
+                         ),
+                         column(width = 2,
+                                box(width = NULL, status = "warning",
+                                    selectizeInput("select_pairtypes", "Select pairs of types",
+                                                   options = list(maxItems = 2),
+                                                   choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                   selected = c("Protests","Riots"),
+                                                   multiple = TRUE)
+                                ),
+                                box(width = NULL, status = "warning",
+                                    radioButtons("select_function", "Select Summary Function:", 
+                                                 choices = c("K function",
+                                                             "G function",
+                                                             "J function"),
+                                                 selected = c("K function")
+                                    )
+                                ),
+                                box(width = NULL, status = "warning",
+                                    sliderInput("select_nsim2", "# Monte Carlo Simulation:",
+                                                min = 0, max = 50, value = 19
+                                    )
+                                )
+                         )
+                     )
+            )
+        )
+    )
+)
+
 
 data<-tabItem(
     tabName = "data",
@@ -323,14 +509,13 @@ data<-tabItem(
 )
 
 
-
 body <- dashboardBody(
     tabItems(
         tabItem(tabName = "home"),
         explore,
         pointpattern,
         tabItem(tabName = "time"),
-        tabItem(tabName = "data")
+        data
     )
 )
 
@@ -365,7 +550,7 @@ server <- function(input, output, session) {
                           coords = c("longitude", "latitude"),
                           crs=4326)
         
-        SA_sf <- st_transform(SA_sf, 24313)
+        SA_sf <- st_transform(SA_sf, "+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
         
         # obtaining shapefiles from rearthnaturaldata
         # convert the geospatial data to sf object
@@ -373,7 +558,7 @@ server <- function(input, output, session) {
         SA_sh <- st_as_sf(rnaturalearthdata::countries50)%>%
             filter(adm0_a3 %in% c("IND","BGD","LKA","NPL","PAK"))%>%
             filter(name %in% c(as.vector(input$select_country)))
-        SA_sh <- st_transform(SA_sh, 24313)
+        SA_sh <- st_transform(SA_sh, "+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
         
         by_eventtype <- SA_sf %>%
             filter(event_type %in% c(as.vector(input$select_eventtype1)))%>%
@@ -402,8 +587,9 @@ server <- function(input, output, session) {
                                          "}")),
                       selection = list(target = 'row+column'),
                       rownames=FALSE)
-
+        
     })
+    
     
     output$slopegraph <- renderPlot({
         SA_sh_df <- readRDS("Data/prepared_files/SA_sh.rds")
@@ -566,7 +752,6 @@ server <- function(input, output, session) {
         plot(csr)
     })
     
-    
 
     output$mpp_plot <- renderPlot({
         ppp_u <- unique(ppp())
@@ -626,7 +811,6 @@ server <- function(input, output, session) {
             write_csv(head(data), file)
         }
     )
-    
     
 }
 shiny::shinyApp(ui, server)
