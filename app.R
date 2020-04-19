@@ -1,4 +1,26 @@
-packages <- c('shiny','shinydashboard','tidyverse','sf','RColorBrewer','viridis','GADMTools','tmap','leaflet','here','rnaturalearthdata','lubridate','plotly','htmltools','raster','maptools','rgdal','spatstat','sp','ggplot2','anytime','plyr','zoo','DT')
+packages <- c('shiny',
+              'shinydashboard',
+              'tidyverse',
+              'sf',
+              'RColorBrewer',
+              'viridis',
+              'GADMTools',
+              'tmap',
+              'leaflet',
+              'here',
+              'rnaturalearthdata',
+              'lubridate',
+              'plotly',
+              'htmltools',
+              'raster',
+              'maptools',
+              'rgdal',
+              'spatstat',
+              'sp',
+              'ggplot2',
+              'anytime',
+              'plyr',
+              'zoo')
 
 for (p in packages){
     if (!require(p,character.only=T)){
@@ -7,36 +29,8 @@ for (p in packages){
     library(p, character.only=T)
 }
 
-
-library(rsconnect)
-library(shiny)
-library(shinydashboard)
-library(tidyverse)
-library(sf)
-library(RColorBrewer)
-library(viridis)
-library(GADMTools)
-library(tmap)
-library(leaflet)
-library(here)
-library(rnaturalearthdata)
-library(lubridate)
-library(plotly)
-library(htmltools)
-library(raster)
-library(maptools)
-library(rgdal)
-library(spatstat)
-library(sp)
-library(ggplot2)
-library(anytime)
-library(plyr)
-library(zoo)
-library(DT)
-
-
 # Reading the raw csv file as a tbl_df
-#ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
+ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
 
 # Read in aspatial dataframe
 SA_df <- readRDS("Data/prepared_files/SA_df.rds")
@@ -100,48 +94,29 @@ explore <- tabItem(
     fluidRow(
         tabBox(
             width = NULL,
-            title = "", height= "900px",
-            tabPanel("Overview",
-                     fluidRow(
-                         column(width = 9,
-                                h3("Point Symbol Map"),
-                                leafletOutput("tmap_overview"),
-                                p("Click the points on the map for more information about the event.")
-                         ),
-                         column(width = 3,
-                                box(width = NULL, status = "warning",
-                                    checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
-                                                       choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                                       selected = c("Protests")
-                                    )
-                                ),
-                                
-                                box(width = NULL, status = "warning",
-                                    checkboxGroupInput("select_country", "Filter countries:",
-                                                       choices = c(as.vector(sort(unique(SA_df$country)))),
-                                                       selected = c("Pakistan")
-                                    )
-                                )
-                                
-                         )
+            title = "", height= "650px",
+            tabPanel("Overall Map-view",
+                     column(width = 9,
+                            leafletOutput("tmap_overview")
                      ),
-                     fluidRow(
-                         column(width = 12,
-                                h4("Explore the data!"),
-                                DT::dataTableOutput("datatable")
-                         )
-                     )
-            ),
-            tabPanel("Calendar Chart",
-                     fluidRow(
-                     column(width = 10,
-                            h3("Time-series Calendar Heatmap"),
-                            plotlyOutput("calendar_view")),
-                     column(width = 2,
+                     column(width = 3,
                             box(width = NULL, status = "warning",
-                                checkboxGroupInput("filter_country", "Filter countries:",
-                                               choices = c(as.vector(sort(unique(ACLED_SA$country)))),
-                                               selected = c("Bangladesh","India","Nepal","Pakistan","Sri Lanka"))))
+                                checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
+                                                   choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                                   selected = c("Protests")
+                                )
+                            ),
+                            
+                            box(width = NULL, status = "warning",
+                                checkboxGroupInput("select_country", "Filter countries:",
+                                                   choices = c(as.vector(sort(unique(SA_df$country)))),
+                                                   selected = c("Pakistan")
+                                )
+                            )
+                     )),
+            tabPanel("Calendar Chart",
+                     column(width = 12,
+                            plotlyOutput("calendar_view")
                      ))
         )
         
@@ -261,47 +236,7 @@ pointpattern <- tabItem(
     )
 )
 
-data<-tabItem(
-    tabName = "data",
-    fluidRow(
-        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Load New Dataset",
-            column(width = 12,
-                   fileInput("file1", "Choose CSV File",
-                             multiple = TRUE,
-                             accept = c("text/csv",
-                                        "text/comma-separated-values,text/plain",
-                                        ".csv"))),
-            column(width = 4,
-                   checkboxInput("header", "Header", TRUE)),
-            column(width = 4,
-                   radioButtons("sep", "Separator",
-                                choices = c(Comma = ",",
-                                            Semicolon = ";",
-                                            Tab = "\t"),
-                                selected = ",")),
-            column(width = 4,
-                   radioButtons("quote", "Quote",
-                                choices = c(None = "",
-                                            "Double Quote" = '"',
-                                            "Single Quote" = "'"),
-                                selected = '"')))),
-    fluidRow(
-        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Data Adjustments",    
-            column(width = 4,
-                   radioButtons("disp", "Display view",
-                                choices = c(Head = "head",
-                                            All = "all"),
-                                selected = "head")),
-            column(width = 4,
-                   downloadButton(outputId = "downloadData", label = "Download Datatset")
-            )
-        )),
-    fluidRow(
-        width = NULL,
-        title = "", height= "1000px",
-        tableOutput("contents")
-    )
-)
+
 
 body <- dashboardBody(
     tabItems(
@@ -309,7 +244,7 @@ body <- dashboardBody(
         explore,
         pointpattern,
         tabItem(tabName = "time"),
-        data
+        tabItem(tabName = "data")
     )
 )
 
@@ -367,20 +302,6 @@ server <- function(input, output, session) {
                     id= "data_id",
                     popup.vars= c("Country:"="country", "State/Province:"="admin1","Event Type"="event_type","Sub-Event Type"="sub_event_type","Primary actor"="actor1"))
         tmap_leaflet(tm_SA)
-    })
-    
-    output$datatable <- DT::renderDataTable({
-        DT::datatable(data = SA_df %>% 
-                          filter(country %in% input$select_country, event_type %in% input$select_eventtype1)  %>% 
-                          dplyr::select(data_id, event_date, event_type, actor1, country, admin1, location, fatalities),
-                      options = list(pageLength = 5,
-                                     lengthMenu = c(5, 10, 15, 20),
-                                     initComplete = JS(
-                                         "function(settings, json) {",
-                                         "$(this.api().table().header()).css({'background-color': '#000', 'color': '#fff'});",
-                                         "}")),
-                      selection = list(target = 'row+column'),
-                      rownames=FALSE)
         
     })
     
@@ -415,6 +336,7 @@ server <- function(input, output, session) {
                   legend.direction="horizontal",
                   legend.key.size=unit(0.3,"cm"),
                   legend.spacing.x=unit(0.1,"cm"))
+
     })
     
     sh <- reactive({
@@ -453,7 +375,7 @@ server <- function(input, output, session) {
     })
     
     poly2 <- reactive({
-        spTransform(poly(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
+        spTransform(poly(), CRS=CRS("+init=epsg:24313"))
     })
     
     owin <- reactive({
@@ -469,9 +391,9 @@ server <- function(input, output, session) {
         
         ppp_marks <- subset(ppp(), marks == input$select_eventtype2) 
         kd <- density(ppp_marks)
-        ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
+        ras <- raster(kd, crs="+init=epsg:24313")
         
-        shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
+        shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313"))
         tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = "quantile", n = 20, palette=viridisLite::magma(7)) +
             tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
             tm_shape(shape) +
@@ -479,7 +401,6 @@ server <- function(input, output, session) {
             tm_fill(col="NAME_1", alpha=0, id="NAME_1", title= "State",legend.show=FALSE)
         tmap_leaflet(tmap_kd)
     })
-    
     
     output$nnd_plot <- renderPlot({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
@@ -496,6 +417,26 @@ server <- function(input, output, session) {
         plot(Gcsr, xaxt="n", xlim = c(0,13208))
     })
     
+    output$calendar_view <- renderPlotly({
+        ACLED_clean <- aggregate(ACLED_SA, by = list(ACLED_SA$event_date), FUN = length)
+        colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"Events"
+        
+        ACLED_clean$weekday = as.POSIXlt(anydate(ACLED_clean$Group.1))$wday
+        ACLED_clean$weekdayf<-factor(ACLED_clean$weekday,levels=rev(0:6),labels=rev(c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),ordered=TRUE) #converting the day no. to factor 
+        ACLED_clean$monthf<-factor(month(anydate(ACLED_clean$Group.1)),levels=as.character(1:12),
+                                   labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),ordered=TRUE) # finding the month 
+        ACLED_clean$yearmonth<- factor(as.yearmon(anydate(ACLED_clean$Group.1))) #finding the year and the month from the date. Eg: Nov 2018 
+        ACLED_clean$week <- as.numeric(format(anydate(ACLED_clean$Group.1),"%W")) #finding the week of the year for each date                           
+        ACLED_clean<-ddply(ACLED_clean,.(yearmonth),transform,monthweek=1+week-min(week)) #normalizing the week to start at 1 for every month 
+        
+        ggplot(ACLED_clean, aes(monthweek, weekdayf, fill = Events)) + 
+            geom_tile(colour = "white") + 
+            facet_grid(year(anydate(ACLED_clean$Group.1))~monthf) + 
+            scale_fill_gradient(low="red", high="green") + 
+            xlab("Week of Month") + ylab("Day of Week") + 
+            labs(fill = "No. of Events") 
+        
+    })
     
     output$Ffunction <- renderPlot({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
@@ -536,39 +477,6 @@ server <- function(input, output, session) {
         
         plot(cross_csr, main=paste0(input$select_function))
     })
-    
-    uploadData <- reactive({
-        infile<-input$file1
-        df2<-read_csv("data/2016-01-01-2019-12-31-Southern_Asia.csv")
-        if(is.null(infile))
-        {
-            return(df2)
-        }
-        else{
-            df<-read.csv(infile$datapath,header=input$header,sep=input$sep,quote=input$quote)
-            return(df)
-        }
-    })
-    
-    output$contents<-renderTable({
-        df <- uploadData() 
-        if(input$disp=="head")
-        {
-            return(head(df))
-        }
-        return(df)
-    })
-    
-    output$downloadData <- downloadHandler(
-        filename = "data/2016-01-01-2019-12-31-Southern_Asia.csv",
-        content = function(file) {
-            # The code for filtering the data is copied from the
-            # renderTable() function
-            data <- uploadData()
-            # Write the filtered data into a CSV file
-            write_csv(head(data), file)
-        }
-    )
     
 }
 shiny::shinyApp(ui, server)

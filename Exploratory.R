@@ -17,7 +17,8 @@ packages <- c('shiny',
               'maptools',
               'rgdal',
               'spatstat',
-              'sp')
+              'sp',
+              'CGPfunctions')
 
 for (p in packages){
   if (!require(p,character.only=T)){
@@ -53,5 +54,4 @@ SA_tm <- tm_shape(SA_sh) +
           popup.vars= c("Country:"="country", "State/Province:"="admin1","Event Type"="event_type","Sub-Event Type"="sub_event_type","Primary actor"="actor1"))
 
 tmap_leaflet(SA_tm)   
-
 

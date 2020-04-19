@@ -46,6 +46,8 @@ SA_sf <- st_as_sf(SA_df,
                   crs=4326)
 
 SA_sf <- st_transform(SA_sf, 24313)
+# convert units from m to km
+SA_sf <- st_transform(SA_sf, "+proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
 
 if (!file.exists(paste0(here::here(),"/Data/prepared_files/SA_sf.rds"))){
   saveRDS(SA_sf, paste0(here::here(),"/Data/prepared_files/SA_sf.rds"))
@@ -57,6 +59,7 @@ if (!file.exists(paste0(here::here(),"/Data/prepared_files/SA_sf.rds"))){
 xy <- SA_df[,c("longitude","latitude")]
 SA_sp <- SpatialPointsDataFrame(coords = xy, data=SA_df, proj4string =CRS("+init=epsg:4326"))
 SA_sp <- spTransform(SA_sp, CRS=CRS("+init=epsg:24313"))
+SA_sp <- spTransform(SA_sp, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
 
 if (!file.exists(paste0(here::here(),"/Data/prepared_files/SA_sp.rds"))){
   saveRDS(SA_sp, paste0(here::here(),"/Data/prepared_files/SA_sp.rds"))
@@ -83,6 +86,9 @@ SA_sh <- st_as_sf(rnaturalearthdata::countries50)%>%
   filter(adm0_a3 %in% c("IND","BGD","LKA","NPL","PAK"))
 
 SA_sh <- st_transform(SA_sh, 24313)
+#convert units from m to km
+SA_sh <- st_transform(SA_sh, "+proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
+
 
 if (!file.exists(paste0(here::here(),"/Data/prepared_files/SA_sh.rds"))){
   saveRDS(SA_sh, paste0(here::here(),"/Data/prepared_files/SA_sh.rds"))
@@ -104,12 +110,16 @@ LKA_poly <- as(LKA_sh, "SpatialPolygons")
 NPL_poly <- as(NPL_sh, "SpatialPolygons")
 IND_poly <- as(IND_sh, "SpatialPolygons")
 
-# Transform the CRS (source is using WGS84 datum)
-PAK_poly <- spTransform(PAK_poly, CRS=CRS("+init=epsg:24313"))
-BGD_poly <- spTransform(BGD_poly, CRS=CRS("+init=epsg:24313"))
-LKA_poly <- spTransform(LKA_poly, CRS=CRS("+init=epsg:24313"))
-NPL_poly <- spTransform(NPL_poly, CRS=CRS("+init=epsg:24313"))
-IND_poly <- spTransform(IND_poly, CRS=CRS("+init=epsg:24313"))
+# Transform the CRS (source is using WGS84 datum), and convert units from m to km
+PAK_poly <- spTransform(PAK_poly, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
+
+BGD_poly <- spTransform(BGD_poly, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
+
+LKA_poly <- spTransform(LKA_poly, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
+
+NPL_poly <- spTransform(NPL_poly, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
+
+IND_poly <- spTransform(IND_poly, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
 
 
 # convert to owin

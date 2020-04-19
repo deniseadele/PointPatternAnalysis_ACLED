@@ -64,16 +64,14 @@ plot(IND_ppp)
 # Example using pakistan
 sh <- PAK_sh 
 poly = as(sh, "SpatialPolygons")
-poly <- spTransform(poly, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
+poly <- spTransform(poly, CRS=CRS("+init=epsg:24313"))
 owin <- maptools::as.owin.SpatialPolygons(poly)
 ppp <- PAK_ppp[owin]
 ppp_marks <- subset(ppp, marks == "Protests") 
 kd <- density(ppp_marks)
-ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
+ras <- raster(kd, crs="+init=epsg:24313")
 
-
-shape <- spTransform(sh, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
-
+shape <- spTransform(sh, CRS=CRS("+init=epsg:24313"))
 tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = "quantile", n = 20, palette=viridisLite::magma(7)) +
   tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
   tm_shape(shape) +
