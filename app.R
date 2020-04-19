@@ -1,11 +1,11 @@
-packages <- c('shiny','shinydashboard','tidyverse','sf','RColorBrewer','viridis','GADMTools','tmap','leaflet','here','rnaturalearthdata','lubridate','plotly','htmltools','raster','maptools','rgdal','spatstat','sp','ggplot2','anytime','plyr','zoo','DT')
+#packages <- c('shiny','shinydashboard','tidyverse','sf','RColorBrewer','viridis','GADMTools','tmap','leaflet','here','rnaturalearthdata','lubridate','plotly','htmltools','raster','maptools','rgdal','spatstat','sp','ggplot2','anytime','plyr','zoo','DT')
 
-for (p in packages){
-    if (!require(p,character.only=T)){
-        install.packages(p)
-    }
-    library(p, character.only=T)
-}
+#for (p in packages){
+#    if (!require(p,character.only=T)){
+#        install.packages(p)
+#    }
+#    library(p, character.only=T)
+#}
 
 
 library(rsconnect)
@@ -33,6 +33,7 @@ library(anytime)
 library(plyr)
 library(zoo)
 library(DT)
+library(CGPfunctions)
 
 
 # Reading the raw csv file as a tbl_df
@@ -132,6 +133,21 @@ explore <- tabItem(
                          )
                      )
                      ),
+            tabPanel("Ranking",
+                     fluidRow(
+                         column(width = 9,
+                                plotOutput("slopegraph")
+                         ),
+                         column(width = 3,
+                                box(width = NULL, status = "warning",
+                                    radioButtons("select_rank", "Compare by:",
+                                                       choices = c("fatalities","intensity"),
+                                                       selected = c("intensity")
+                                    )
+                                )
+                         )
+                     )
+            ),
             tabPanel("Calendar Chart",
                      column(width = 12,
                             plotlyOutput("calendar_view")
@@ -181,37 +197,47 @@ pointpattern <- tabItem(
             ),
             tabPanel("Second-order", 
                      h3("Second-order analysis"),
-                     fluidRow(
-                         column(width = 4,
-                                box(width = NULL, status = "warning", title = "Nearest-neighbour", solidHeader = TRUE,
-                                    plotOutput("nnd_plot", height = 250)
-                                ),
-                                box(width = NULL, status = "warning", title = "F function", solidHeader = TRUE,
-                                    plotOutput("Ffunction", height = 250)
+                     column(width = 9,
+                            fluidRow(
+                                box(width = 6, status = "warning", title = "Distance Distribution", solidHeader = TRUE,
+                                    plotOutput("hist_plot", height = 300)),
+                                box(width = 6, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
+                                    plotOutput("env_function", height = 300))
+                            )
+                            #fluidRow(
+                            #    box(width = NULL, status = "warning", title = "Nearest-neighbour distance", solidHeader = T, collapsible =  T, collapsed = T,
+                            #        column(width = 6, plotOutput("nnd_plot", height = 250)),
+                            #        column(width=6, plotOutput("Gfunction", height = 250))
+                            #    )
+                            #),
+                            #fluidRow(
+                            #    box(width = NULL, status = "warning", title = "Empty-space distance", solidHeader = TRUE, collapsible =  T, collapsed = T,
+                            #        column(width=6, plotOutput("distmap", height = 250)),
+                            #        column(width=6, plotOutput("Ffunction", height = 250))
+                            #    )
+                            #)
+                     ),
+                     
+                     column(width = 3,
+                            box(width = NULL, status = "warning",
+                                radioButtons("select_disttype", "Select distance measure:", 
+                                             choices = c("Pairwise","Nearest-neighbour","Empty-space"),
+                                             selected = c("Pairwise")
                                 )
-                         ),
-                         column(width = 4,
-                                box(width = NULL, status = "warning", title = "G function", solidHeader = TRUE,
-                                    plotOutput("Gfunction", height = 250)
-                                ),
-                                box(width = NULL, status = "warning", title = "K function", solidHeader = TRUE,
-                                    plotOutput("Kfunction", height = 250)
+                            ),
+                            box(width = NULL, status = "warning",
+                                radioButtons("select_eventtype3", "Select Conflict Type:", 
+                                             choices = c(as.vector(sort(unique(SA_df$event_type)))),
+                                             selected = c("Protests")
                                 )
-                         ),
-                         column(width = 4,
-                                box(width = NULL, status = "warning",
-                                    radioButtons("select_eventtype3", "Select Conflict Type:", 
-                                                 choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                                 selected = c("Protests")
-                                    )
-                                ),
-                                box(width = NULL, status = "warning",
-                                    sliderInput("select_nsim", "# Monte Carlo Simulation:",
-                                                min = 0, max = 100, value = 49
-                                    )
+                            ),
+                            box(width = NULL, status = "warning",
+                                sliderInput("select_nsim", "# Monte Carlo Simulation:",
+                                            min = 0, max = 100, value = 49
                                 )
-                         )
+                            )
                      )
+
             ),
             tabPanel("Multitype", 
                      h3("Multitype Point Patterns"),
@@ -251,6 +277,48 @@ pointpattern <- tabItem(
                      )
             )
         )
+    )
+)
+
+data<-tabItem(
+    tabName = "data",
+    fluidRow(
+        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Load New Dataset",
+            column(width = 12,
+                   fileInput("file1", "Choose CSV File",
+                             multiple = TRUE,
+                             accept = c("text/csv",
+                                        "text/comma-separated-values,text/plain",
+                                        ".csv"))),
+            column(width = 4,
+                   checkboxInput("header", "Header", TRUE)),
+            column(width = 4,
+                   radioButtons("sep", "Separator",
+                                choices = c(Comma = ",",
+                                            Semicolon = ";",
+                                            Tab = "\t"),
+                                selected = ",")),
+            column(width = 4,
+                   radioButtons("quote", "Quote",
+                                choices = c(None = "",
+                                            "Double Quote" = '"',
+                                            "Single Quote" = "'"),
+                                selected = '"')))),
+    fluidRow(
+        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Data Adjustments",    
+            column(width = 4,
+                   radioButtons("disp", "Display view",
+                                choices = c(Head = "head",
+                                            All = "all"),
+                                selected = "head")),
+            column(width = 4,
+                   downloadButton(outputId = "downloadData", label = "Download Datatset")
+            )
+        )),
+    fluidRow(
+        width = NULL,
+        title = "", height= "1000px",
+        tableOutput("contents")
     )
 )
 
@@ -337,6 +405,74 @@ server <- function(input, output, session) {
 
     })
     
+    output$slopegraph <- renderPlot({
+        SA_sh_df <- readRDS("Data/prepared_files/SA_sh.rds")
+        
+        SA_sh_df$area <- st_area(SA_sh_df)
+        st_geometry(SA_sh_df) <- NULL
+        
+        SA_sh_df <- SA_sh_df %>% dplyr::select(name,area) %>% dplyr::mutate(country=name)
+        SA_df_area <- dplyr::left_join(SA_df, SA_sh_df, by = "country")
+        
+        SA_agg_country <- SA_df_area %>%
+            dplyr::select(c("year","country","area","fatalities")) %>%
+            dplyr::group_by(year, country,area) %>% 
+            dplyr::summarise(fatalities=sum(fatalities),count=n()) %>%
+            dplyr::mutate(area= as.numeric(area))%>%
+            dplyr::mutate(intensity= signif(count/area,2)) %>%
+            dplyr::ungroup(year,country,area) %>%
+            dplyr::mutate(year = factor(year)) %>% 
+            dplyr::rename(x = input$select_rank)
+        
+        
+        newggslopegraph(SA_agg_country, year, x, country,
+                        DataTextSize = 4.5, 
+                        YTextSize = 5, 
+                        XTextSize = 16,
+                        DataLabelPadding = .2,
+                        WiderLabels=TRUE,
+                        #LineColor = colorvect,
+                        ThemeChoice = "gdocs",
+                        TitleTextSize = 18,
+                        TitleJustify = "center") +
+            labs(title=paste0("Conflict Risk Ranking: By ",input$select_rank),
+                 subtitle= NULL , caption=NULL)
+        
+    })
+    
+    output$calendar_view <- renderPlotly({
+        ACLED_SA<-uploadData()
+        ACLED_SA_filter<-ACLED_SA %>%
+            filter(country%in% c(as.vector(input$filter_country)))
+        ACLED_clean <- aggregate(ACLED_SA_filter, by = list(ACLED_SA_filter$event_date), FUN = length)
+        colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"Events"
+        
+        ACLED_clean$weekday = as.POSIXlt(anydate(ACLED_clean$Group.1))$wday
+        ACLED_clean$Day_of_week<-factor(ACLED_clean$weekday,levels=rev(0:6),labels=rev(c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),ordered=TRUE) #converting the day no. to factor 
+        ACLED_clean$monthf<-factor(month(anydate(ACLED_clean$Group.1)),levels=as.character(1:12),
+                                   labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),ordered=TRUE) # finding the month 
+        ACLED_clean$yearmonth<- factor(as.yearmon(anydate(ACLED_clean$Group.1))) #finding the year and the month from the date. Eg: Nov 2018 
+        ACLED_clean$week <- as.numeric(format(anydate(ACLED_clean$Group.1),"%W")) #finding the week of the year for each date                           
+        ACLED_clean<-ddply(ACLED_clean,.(yearmonth),transform,Week_of_month=1+week-min(week)) #normalizing the week to start at 1 for every month 
+        
+        ggplot(ACLED_clean, aes(Week_of_month, Day_of_week, fill = Events)) + 
+            geom_tile(colour = "white") + 
+            facet_grid(year(anydate(ACLED_clean$Group.1))~monthf) + 
+            scale_fill_gradient(low="#009ACD", high="#ff0040") + 
+            xlab("Week of Month") + ylab("Day of Week") + 
+            labs(fill = "Events") +
+            theme_bw(base_size=10)+
+            theme(legend.title=element_blank(),
+                  panel.border=element_blank(),
+                  axis.ticks=element_blank(),
+                  strip.background=element_blank(),
+                  legend.position="top",
+                  legend.justification="right",
+                  legend.direction="horizontal",
+                  legend.key.size=unit(0.3,"cm"),
+                  legend.spacing.x=unit(0.1,"cm"))
+    })
+    
     sh <- reactive({
         if (input$select_country2=="Pakistan") {
             PAK_sh
@@ -401,56 +537,37 @@ server <- function(input, output, session) {
     })
     
     
-    output$nnd_plot <- renderPlot({
+    output$hist_plot <- renderPlot({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
         ppp_marks_u <- unique(ppp_marks)
-        nnd <- nndist(ppp_marks_u)
-        hist(nnd, breaks=20)
+        if (input$select_disttype == 'Pairwise'){
+            dis <- pairdist(ppp_marks_u)
+        } else if (input$select_disttype == 'Nearest-neighbour') {
+            dis <- nndist(ppp_marks_u)
+        } else {
+            dis <- distfun(ppp_marks_u)
+        }
+        
+        hist(dis, breaks=20)
         
     })
     
-    output$Gfunction <- renderPlot({
+    output$env_function <- renderPlot({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
         ppp_marks_u <- unique(ppp_marks)
-        Gcsr <- envelope(ppp_marks_u, Gest, correction = c("best"), nsim = input$select_nsim)
-        plot(Gcsr, xaxt="n", xlim = c(0,13208))
-    })
-    
-    output$calendar_view <- renderPlotly({
-        ACLED_clean <- aggregate(ACLED_SA, by = list(ACLED_SA$event_date), FUN = length)
-        colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"Events"
+        if (input$select_disttype == 'Pairwise'){
+            csr <- envelope(ppp_marks_u, Kest, nsim = input$select_nsim)
+        } else if (input$select_disttype == 'Nearest-neighbour') {
+            csr <- envelope(ppp_marks_u, Gest, correction = c("best"), nsim = input$select_nsim)
+        } else {
+            csr <- envelope(ppp_marks_u, Fest, nsim = input$select_nsim)
+        }
         
-        ACLED_clean$weekday = as.POSIXlt(anydate(ACLED_clean$Group.1))$wday
-        ACLED_clean$weekdayf<-factor(ACLED_clean$weekday,levels=rev(0:6),labels=rev(c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),ordered=TRUE) #converting the day no. to factor 
-        ACLED_clean$monthf<-factor(month(anydate(ACLED_clean$Group.1)),levels=as.character(1:12),
-                                   labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),ordered=TRUE) # finding the month 
-        ACLED_clean$yearmonth<- factor(as.yearmon(anydate(ACLED_clean$Group.1))) #finding the year and the month from the date. Eg: Nov 2018 
-        ACLED_clean$week <- as.numeric(format(anydate(ACLED_clean$Group.1),"%W")) #finding the week of the year for each date                           
-        ACLED_clean<-ddply(ACLED_clean,.(yearmonth),transform,monthweek=1+week-min(week)) #normalizing the week to start at 1 for every month 
-        
-        ggplot(ACLED_clean, aes(monthweek, weekdayf, fill = Events)) + 
-            geom_tile(colour = "white") + 
-            facet_grid(year(anydate(ACLED_clean$Group.1))~monthf) + 
-            scale_fill_gradient(low="red", high="green") + 
-            xlab("Week of Month") + ylab("Day of Week") + 
-            labs(fill = "No. of Events") 
-        
+        plot(csr)
     })
     
-    output$Ffunction <- renderPlot({
-        ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
-        ppp_marks_u <- unique(ppp_marks)
-        Fcsr <- envelope(ppp_marks_u, Fest, nsim = input$select_nsim)
-        plot(Fcsr)
-    })
     
-    output$Kfunction <- renderPlot({
-        ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
-        ppp_marks_u <- unique(ppp_marks)
-        Kcsr <- envelope(ppp_marks_u, Kest, nsim = input$select_nsim)
-        plot(Kcsr)
-    })
-    
+
     output$mpp_plot <- renderPlot({
         ppp_u <- unique(ppp())
         ppp_u_m <- split(ppp_u)
@@ -476,6 +593,40 @@ server <- function(input, output, session) {
         
         plot(cross_csr, main=paste0(input$select_function))
     })
+    
+    uploadData <- reactive({
+        infile<-input$file1
+        df2<-read_csv("data/2016-01-01-2019-12-31-Southern_Asia.csv")
+        if(is.null(infile))
+        {
+            return(df2)
+        }
+        else{
+            df<-read.csv(infile$datapath,header=input$header,sep=input$sep,quote=input$quote)
+            return(df)
+        }
+    })
+    
+    output$contents<-renderTable({
+        df <- uploadData() 
+        if(input$disp=="head")
+        {
+            return(head(df))
+        }
+        return(df)
+    })
+    
+    output$downloadData <- downloadHandler(
+        filename = "data/2016-01-01-2019-12-31-Southern_Asia.csv",
+        content = function(file) {
+            # The code for filtering the data is copied from the
+            # renderTable() function
+            data <- uploadData()
+            # Write the filtered data into a CSV file
+            write_csv(head(data), file)
+        }
+    )
+    
     
 }
 shiny::shinyApp(ui, server)

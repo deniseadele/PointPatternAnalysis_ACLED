@@ -117,7 +117,7 @@ clarkevans.test(PAK_ppp_unique)
 # 2nd order analysis on one state and one event type
 sh2 <- PAK_sh[PAK_sh@data$NAME_1 == "Sind",] 
 poly2 = as(sh2, "SpatialPolygons")
-poly2 <- spTransform(poly2, CRS=CRS("+init=epsg:24313"))
+poly2 <- spTransform(poly2, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
 owin2 <- maptools::as.owin.SpatialPolygons(poly2)
 ppp <- PAK_ppp[owin2]
 ppp_u <- unique(ppp)
@@ -126,6 +126,11 @@ ppp_u_mark <- subset(ppp_u, marks == "Protests")#, drop=TRUE)
 # Nearest neighbour
 nnd <- nndist(ppp_u_mark )
 hist(nnd, breaks=20)
+plot(nnd)
+
+# pairwise distance
+pwd <- pairdist(ppp_u_mark)
+hist(pwd,breaks=20)
 
 # second nearest neighbours
 nnd2 <- nndist(ppp_u_mark , k=2)
@@ -134,10 +139,17 @@ nnd2 <- nndist(ppp_u_mark , k=2)
 nnd1to3 <- nndist(ppp_u_mark , k=1:3)
 head(nnd1to3)
 
+#distfun
+epd <- distfun(ppp_u_mark)
+eepd <- as.im(distfun(ppp_u_mark))
+hist(epd,breaks=20)
+contour(epd)
+
+
 # G function
 
 G <- Gest(ppp_u_mark , correction = "border") 
-plot(G, cbind(km, rs, theo) ~ r, xaxt="n", xlim = c(0,13208))
+plot(G, cbind(km, rs, theo) ~ r)#, xaxt="n", xlim = c(0,13208))
 G_csr <- envelope(ppp_u_mark , Gest, nsim = 49)
 plot(G_csr)
 

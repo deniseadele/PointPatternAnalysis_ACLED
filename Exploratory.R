@@ -55,3 +55,37 @@ SA_tm <- tm_shape(SA_sh) +
 
 tmap_leaflet(SA_tm)   
 
+
+# Slope Chart
+# read in South Asia shapefiles and assign to another variable
+SA_sh_df <- readRDS("Data/prepared_files/SA_sh.rds")
+
+SA_sh_df$area <- st_area(SA_sh_df)
+st_geometry(SA_sh_df) <- NULL
+
+
+SA_sh_df <- SA_sh_df %>% dplyr::select(name,area) %>% dplyr::mutate(country=name)
+
+SA_df_area <- dplyr::left_join(SA_df, SA_sh_df, by = "country")
+
+
+SA_agg_country <- SA_df_area %>%
+  dplyr::select(c("year","country","area","fatalities")) %>%
+  dplyr::group_by(year, country,area) %>% 
+  dplyr::summarise(fatalities=sum(fatalities),count=n()) %>%
+  dplyr::mutate(area= as.numeric(area))%>%
+  dplyr::mutate(intensity= signif(count/area, 2)) %>%
+  dplyr::ungroup(year,country,area) %>%
+  dplyr::mutate(year = factor(year))
+  
+  
+
+newggslopegraph(SA_agg_country, year, intensity, country,
+                XTextSize = 10, YTextSize = 3, WiderLabels=TRUE,
+                #LineColor = colorvect,
+                ThemeChoice = "gdocs",
+                TitleTextSize = 16,
+                TitleJustify = "center") +
+  labs(title="Conflict Risk Ranking",
+       subtitle= NULL, caption=NULL)
+
