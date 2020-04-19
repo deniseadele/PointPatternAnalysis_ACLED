@@ -415,7 +415,6 @@ server <- function(input, output, session) {
                   legend.direction="horizontal",
                   legend.key.size=unit(0.3,"cm"),
                   legend.spacing.x=unit(0.1,"cm"))
-        
     })
     
     sh <- reactive({
