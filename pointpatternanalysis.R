@@ -183,6 +183,14 @@ plot(Kcsr)
 # NOTE: this function is only applicable to unmarked patterns
 plot(allstats(ppp_u_mark))
 
+# To account for inhomogenity
+bw <- density(ppp_u_mark,bw.diggle)
+
+plot(bw)
+
+Lcsr_inhom <- envelope(ppp_u_mark, Linhom, sigma=bw,
+                       nsim=19)
+plot(Lcsr_inhom)
 
 ### PAIRS OF TYPE ###
 ppp_u_marks <- subset(ppp_u, marks %in% c("Protests","Riots"))
