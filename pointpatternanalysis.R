@@ -68,9 +68,17 @@ poly <- spTransform(poly, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=637730
 owin <- maptools::as.owin.SpatialPolygons(poly)
 ppp <- PAK_ppp[owin]
 ppp_marks <- subset(ppp, marks == "Protests") 
-kd <- density(ppp_marks)
-ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
 
+#ADAPTIVE
+kd_adap <- adaptive.density(ppp_marks) 
+ras_adap <- raster(kd_adap, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
+
+# FIXED
+kd <- density(ppp_marks)
+kd10 <- density(ppp_marks, sigma=10) # manual selection of sigma
+kd_diggle <- density(ppp_marks, bw.diggle(ppp_marks)) # bandwidth selection using cross-validation method
+
+ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
 
 shape <- spTransform(sh, CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
 
@@ -128,6 +136,9 @@ nnd <- nndist(ppp_u_mark )
 hist(nnd, breaks=20)
 plot(nnd)
 
+class(nnd)
+
+
 # pairwise distance
 pwd <- pairdist(ppp_u_mark)
 hist(pwd,breaks=20)
@@ -173,7 +184,7 @@ plot(Kcsr)
 plot(allstats(ppp_u_mark))
 
 
-# k-cross function??
+### PAIRS OF TYPE ###
 ppp_u_marks <- subset(ppp_u, marks %in% c("Protests","Riots"))
 kcross <- Kcross(ppp_u, i="Protests",j="Riots") 
 plot(kcross)
@@ -181,6 +192,16 @@ plot(kcross)
 kmult <- envelope(ppp_u, fun=Kcross, nsim=19, i="Protests",j="Riots")
 plot(kmult)
 
+# test of indenpendence
+# unable to plot this.. need rectangular windows
+kshift <- envelope(ppp_u, Kcross, nsim=19, i="Protests", j="Riots",
+                   simulate=expression(rshift(ppp_u, radius=100)))
+
+plot(kshift)
+
+# pair correlation function
+p <- pcfcross(ppp_u, i="Protests", j="Riots")
+plot(p)
 
 ppp_u_m <- split(ppp_u)
 plot(ppp_u[marks(ppp_u)%in% c('Protests','Riots')])
@@ -210,8 +231,8 @@ nndm_g <- as.data.frame(nndm) %>% gather(key="Event_type",value="dist",1:2)
 head(nndm_g,3)
 
 
-nndm_g <- nndm_g %>% mutate(id = row_number())
-
+nndm_g <- nndm_g %>% mutate(id = NULL)
+class(nndm_g)
 nndm_g_bg <- nndm_g[, -1]
 ggplot(nndm_g, aes(x = dist, fill = Event_type)) +
   geom_histogram(data = nndm_g_bg, fill = "grey", alpha = .5) +
@@ -219,4 +240,5 @@ ggplot(nndm_g, aes(x = dist, fill = Event_type)) +
   facet_wrap(~ Event_type)
 
 
-nncorr(X)
+ma<-markconnect(ppp_u, "Protests", "Riots")
+plot(ma)

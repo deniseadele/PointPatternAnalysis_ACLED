@@ -45,9 +45,8 @@ SA_sf <- st_as_sf(SA_df,
                   coords = c("longitude", "latitude"),
                   crs=4326)
 
-SA_sf <- st_transform(SA_sf, 24313)
-# convert units from m to km
-SA_sf <- st_transform(SA_sf, "+proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
+# use projected coordinate system 24313, and convert units from m to km
+SA_sf <- st_transform(SA_sf, "+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
 
 if (!file.exists(paste0(here::here(),"/Data/prepared_files/SA_sf.rds"))){
   saveRDS(SA_sf, paste0(here::here(),"/Data/prepared_files/SA_sf.rds"))

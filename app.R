@@ -34,10 +34,11 @@ library(plyr)
 library(zoo)
 library(DT)
 library(CGPfunctions)
+library(shinyBS)
 
 
 # Reading the raw csv file as a tbl_df
-#ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
+ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
 
 # Read in aspatial dataframe
 SA_df <- readRDS("Data/prepared_files/SA_df.rds")
@@ -96,6 +97,8 @@ sidebar <- dashboardSidebar(
     )
 )
 
+
+
 explore <- tabItem(
     tabName = "explore",
     fluidRow(
@@ -140,203 +143,28 @@ explore <- tabItem(
                          ),
                          column(width = 3,
                                 box(width = NULL, status = "warning",
-                                    radioButtons("select_rank", "Compare by:",
-                                                 choices = c("fatalities","intensity"),
-                                                 selected = c("intensity")
-                                    )
+                                    radioButtons("select_rank", "Select indicators:",
+                                                 choices = c("fatalities","number of events"),
+                                                 selected = c("number of events")
+                                    ),
+                                    checkboxInput("normalise", "Normalise", value = TRUE, width = NULL),
+                                    bsTooltip(id = "normalise", title = "Check to normalise indicators:<ul><li>fatalities per event</li><li>number of events per unit area (km2)</li></ul>", placement = "bottom",trigger = "hover",options = list(container = "body"))
                                 )
                          )
                      )
             ),
             tabPanel("Calendar Chart",
-                     column(width = 12,
-                            plotlyOutput("calendar_view")
-                     ))
-        )
-        
-    )
-)
-
-pointpattern <- tabItem(
-    tabName = "pointpattern",
-    fluidRow(
-        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Global Filters: Region",
-            column(width = 6,
-                   selectInput("select_country2", "Select Country:", 
-                               choices = c(as.vector(sort(unique(SA_df$country)))),
-                               selected = c("Pakistan")
-                   )
-            ),
-            column(width = 6,
-                   selectInput("select_state", "Select States:",
-                               choices = c(as.vector(sort(unique(SA_df$country)))),
-                               selected = c(as.vector(sort(unique(SA_df$country)))),
-                               multiple = TRUE)
-            )
-        )
-    ),
-    
-    fluidRow(
-        tabBox(
-            width = NULL,
-            title = "", height= "650px",
-            tabPanel("First-order",
-                     
-                     h3("First-order analysis"),
-                     h4("Kernel Density Estimation"),
-                     column(width = 9,
-                            leafletOutput("tmap_kd")
-                     ),
-                     column(width = 3,
-                            box(width = NULL, status = "warning",
-                                radioButtons("select_eventtype2", "Select Conflict Type:", 
-                                             choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                             selected = c("Protests")) 
-                            )
-                     )
-            ),
-            tabPanel("Second-order", 
-                     h3("Second-order analysis"),
-                     column(width = 9,
-                            fluidRow(
-                                box(width = 6, status = "warning", title = "Distance Distribution", solidHeader = TRUE,
-                                    plotOutput("hist_plot", height = 300)),
-                                box(width = 6, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
-                                    plotOutput("env_function", height = 300))
-                            )
-                            #fluidRow(
-                            #    box(width = NULL, status = "warning", title = "Nearest-neighbour distance", solidHeader = T, collapsible =  T, collapsed = T,
-                            #        column(width = 6, plotOutput("nnd_plot", height = 250)),
-                            #        column(width=6, plotOutput("Gfunction", height = 250))
-                            #    )
-                            #),
-                            #fluidRow(
-                            #    box(width = NULL, status = "warning", title = "Empty-space distance", solidHeader = TRUE, collapsible =  T, collapsed = T,
-                            #        column(width=6, plotOutput("distmap", height = 250)),
-                            #        column(width=6, plotOutput("Ffunction", height = 250))
-                            #    )
-                            #)
-                     ),
-                     
-                     column(width = 3,
-                            box(width = NULL, status = "warning",
-                                radioButtons("select_disttype", "Select distance measure:", 
-                                             choices = c("Pairwise","Nearest-neighbour","Empty-space"),
-                                             selected = c("Pairwise")
-                                )
-                            ),
-                            box(width = NULL, status = "warning",
-                                radioButtons("select_eventtype3", "Select Conflict Type:", 
-                                             choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                             selected = c("Protests")
-                                )
-                            ),
-                            box(width = NULL, status = "warning",
-                                sliderInput("select_nsim", "# Monte Carlo Simulation:",
-                                            min = 0, max = 100, value = 49
-                                )
-                            )
-                     )
-                     
-            ),
-            tabPanel("Multitype", 
-                     h3("Multitype Point Patterns"),
                      fluidRow(
-                         column(width = 5,
-                                box(width = NULL, status = "warning", title = "Marked Point Patterns", solidHeader = TRUE,
-                                    plotOutput("mpp_plot", height = 320)
-                                )
-                         ),
-                         column(width = 5,
-                                box(width = NULL, status = "warning", title = "Summary Functions", solidHeader = TRUE,
-                                    plotOutput("summaryfunction", height = 320)
-                                )
-                         ),
+                         column(width = 10,
+                                h3("Time-series Calendar Heatmap"),
+                                plotlyOutput("calendar_view")),
                          column(width = 2,
                                 box(width = NULL, status = "warning",
-                                    selectizeInput("select_pairtypes", "Select pairs of types",
-                                                   options = list(maxItems = 2),
-                                                   choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                                   selected = c("Protests","Riots"),
-                                                   multiple = TRUE)
-                                ),
-                                box(width = NULL, status = "warning",
-                                    radioButtons("select_function", "Select Summary Function:", 
-                                                 choices = c("K function",
-                                                             "G function",
-                                                             "J function"),
-                                                 selected = c("K function")
-                                    )
-                                ),
-                                box(width = NULL, status = "warning",
-                                    sliderInput("select_nsim2", "# Monte Carlo Simulation:",
-                                                min = 0, max = 50, value = 19
-                                    )
-                                )
-                         )
+                                    checkboxGroupInput("filter_country", "Filter countries:",
+                                                       choices = c(as.vector(sort(unique(ACLED_SA$country)))),
+                                                       selected = c("Bangladesh","India","Nepal","Pakistan","Sri Lanka"))))
                      )
             )
-        )
-    )
-)
-
-
-explore <- tabItem(
-    tabName = "explore",
-    fluidRow(
-        tabBox(
-            width = NULL,
-            title = "", height= "900px",
-            tabPanel("Overview",
-                     fluidRow(
-                         column(width = 9,
-                                h3("Point Symbol Map"),
-                                leafletOutput("tmap_overview"),
-                                p("Click the points on the map for more information about the event.")
-                         ),
-                         column(width = 3,
-                                box(width = NULL, status = "warning",
-                                    checkboxGroupInput("select_eventtype1", "Select Conflict Type:",
-                                                       choices = c(as.vector(sort(unique(SA_df$event_type)))),
-                                                       selected = c("Protests")
-                                    )
-                                ),
-                                
-                                box(width = NULL, status = "warning",
-                                    checkboxGroupInput("select_country", "Filter countries:",
-                                                       choices = c(as.vector(sort(unique(SA_df$country)))),
-                                                       selected = c("Pakistan")
-                                    )
-                                )
-                                
-                         )
-                     ),
-                     fluidRow(
-                         column(width = 12,
-                                h4("Explore the data!"),
-                                DT::dataTableOutput("datatable")
-                         )
-                     )
-            ),
-            tabPanel("Ranking",
-                     fluidRow(
-                         column(width = 9,
-                                plotOutput("slopegraph")
-                         ),
-                         column(width = 3,
-                                box(width = NULL, status = "warning",
-                                    radioButtons("select_rank", "Compare by:",
-                                                 choices = c("fatalities","intensity"),
-                                                 selected = c("intensity")
-                                    )
-                                )
-                         )
-                     )
-            ),
-            tabPanel("Calendar Chart",
-                     column(width = 12,
-                            plotlyOutput("calendar_view")
-                     ))
         )
         
     )
@@ -370,13 +198,31 @@ pointpattern <- tabItem(
                      h3("First-order analysis"),
                      h4("Kernel Density Estimation"),
                      column(width = 9,
-                            leafletOutput("tmap_kd")
+                            leafletOutput("tmap_kd", height=480)
                      ),
                      column(width = 3,
                             box(width = NULL, status = "warning",
                                 radioButtons("select_eventtype2", "Select Conflict Type:", 
                                              choices = c(as.vector(sort(unique(SA_df$event_type)))),
                                              selected = c("Protests")) 
+                            ),
+                            box(width = NULL, status = "warning",
+                                checkboxInput("explore_bw", "Explore bandwidth selection:", value = FALSE, width = NULL),
+                                conditionalPanel( condition = "input.explore_bw == true",
+                                    radioButtons("bw_selection", "Bandwidth selection:", 
+                                                 choices = c("Automatic","Manual"),
+                                                 selected = c("Automatic")),
+                                    conditionalPanel( condition = "input.bw_selection == 'Automatic'",
+                                                      selectInput("select_autobw", "Cross-validation selection method:", 
+                                                                  choices = c("bw.diggle","bw.CvL","bw.scott","bw.ppl"),
+                                                                  selected = c("bw.diggle"))
+                                    ),
+                                    conditionalPanel( condition = "input.bw_selection == 'Manual'",
+                                                      sliderInput("select_sigma", "Standard deviation of Gaussian Kernel",
+                                                                  min = 0, max = 50, value = 20, step = 0.1)
+                                                      
+                                    )
+                                )
                             )
                      )
             ),
@@ -384,10 +230,8 @@ pointpattern <- tabItem(
                      h3("Second-order analysis"),
                      column(width = 9,
                             fluidRow(
-                                box(width = 6, status = "warning", title = "Distance Distribution", solidHeader = TRUE,
-                                    plotOutput("hist_plot", height = 300)),
-                                box(width = 6, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
-                                    plotOutput("env_function", height = 300))
+                                box(width = NULL, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
+                                    plotOutput("env_function", height = 400))
                             )
                             #fluidRow(
                             #    box(width = NULL, status = "warning", title = "Nearest-neighbour distance", solidHeader = T, collapsible =  T, collapsed = T,
@@ -543,6 +387,7 @@ server <- function(input, output, session) {
         )
     })
     
+ 
     
     output$tmap_overview <- renderLeaflet({
         # Creating a sf object
@@ -600,28 +445,45 @@ server <- function(input, output, session) {
         SA_sh_df <- SA_sh_df %>% dplyr::select(name,area) %>% dplyr::mutate(country=name)
         SA_df_area <- dplyr::left_join(SA_df, SA_sh_df, by = "country")
         
+        
+        
         SA_agg_country <- SA_df_area %>%
             dplyr::select(c("year","country","area","fatalities")) %>%
             dplyr::group_by(year, country,area) %>% 
-            dplyr::summarise(fatalities=sum(fatalities),count=n()) %>%
+            dplyr::summarise(fatalities=sum(fatalities),`number of events`=n()) %>%
             dplyr::mutate(area= as.numeric(area))%>%
-            dplyr::mutate(intensity= signif(count/area,2)) %>%
+            dplyr::mutate(`number of events_norm`= signif(`number of events`/area,2)) %>%
+            dplyr::mutate(fatalities_norm= signif(fatalities/`number of events`,2)) %>%
             dplyr::ungroup(year,country,area) %>%
-            dplyr::mutate(year = factor(year)) %>% 
-            dplyr::rename(x = input$select_rank)
+            dplyr::mutate(year = factor(year)) #%>% 
+            #dplyr::rename(x = input$select_rank)
         
+        if (input$normalise){
+            SA_agg_country <- SA_agg_country %>% 
+                dplyr::rename(x=paste0(input$select_rank,"_norm"))
+            if (input$select_rank == 'fatalities'){
+                title <- 'fatalities per event'
+            } else{
+                title <- 'number of events per unit area (km2)'
+            }
+            
+        } else {
+            SA_agg_country <- SA_agg_country %>% 
+                dplyr::rename(x=input$select_rank)
+            title= input$select_rank
+        }
         
         newggslopegraph(SA_agg_country, year, x, country,
                         DataTextSize = 4.5, 
                         YTextSize = 5, 
                         XTextSize = 16,
-                        DataLabelPadding = .2,
+                        DataLabelPadding = .9,
                         WiderLabels=TRUE,
                         #LineColor = colorvect,
                         ThemeChoice = "gdocs",
                         TitleTextSize = 18,
                         TitleJustify = "center") +
-            labs(title=paste0("Conflict Risk Ranking: By ",input$select_rank),
+            labs(title=paste0("Conflict Risk Ranking: By ",title),
                  subtitle= NULL , caption=NULL)
         
     })
@@ -708,9 +570,28 @@ server <- function(input, output, session) {
     
     
     output$tmap_kd <- renderLeaflet({
+
+        ppp_marks <- subset(ppp(), marks == input$select_eventtype2)
         
-        ppp_marks <- subset(ppp(), marks == input$select_eventtype2) 
-        kd <- density(ppp_marks)
+        if (input$explore_bw & (input$bw_selection =="Automatic")){
+            if (input$select_autobw == "bw.diggle"){
+                bw <- bw.diggle(ppp_marks)
+            } else if(input$select_autobw  == "bw.CvL"){
+                bw <- bw.CvL(ppp_marks)
+            } else if(input$select_autobw  == "bw.scott"){
+                bw <- bw.scott(ppp_marks)
+            } else {
+                bw <- bw.ppl(ppp_marks)
+            } 
+            
+        } else if (input$explore_bw & (input$bw_selection =="Manual")){
+            bw <- input$select_sigma
+        } else{
+            bw <- NULL
+        }
+        
+        
+        kd <- density(ppp_marks, sigma = bw, adjust = 1, kernel = "gaussian")
         ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
         
         shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
@@ -722,21 +603,7 @@ server <- function(input, output, session) {
         tmap_leaflet(tmap_kd)
     })
     
-    
-    output$hist_plot <- renderPlot({
-        ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
-        ppp_marks_u <- unique(ppp_marks)
-        if (input$select_disttype == 'Pairwise'){
-            dis <- pairdist(ppp_marks_u)
-        } else if (input$select_disttype == 'Nearest-neighbour') {
-            dis <- nndist(ppp_marks_u)
-        } else {
-            dis <- distfun(ppp_marks_u)
-        }
-        
-        hist(dis, breaks=20)
-        
-    })
+
     
     output$env_function <- renderPlot({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype3)
@@ -749,7 +616,7 @@ server <- function(input, output, session) {
             csr <- envelope(ppp_marks_u, Fest, nsim = input$select_nsim)
         }
         
-        plot(csr)
+        plot(csr, main=NULL)
     })
     
 
