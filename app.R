@@ -37,6 +37,7 @@ library(DT)
 library(CGPfunctions)
 library(shinyBS)
 library(geoshaper)
+library(ggthemes)
 
 
 # Reading the raw csv file as a tbl_df
@@ -190,46 +191,35 @@ pointpattern <- tabItem(
                    tabPanel("Second-order",
                             h3("Second-order analysis"),
                             column(width = 12,
-                                   fluidRow(
-                                       box(width = NULL, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
-                                           plotOutput("env_function"))
-                                       )
-                                   #fluidRow(
-                                   #    box(width = NULL, status = "warning", title = "Nearest-neighbour distance", solidHeader = T, collapsible =  T, collapsed = T,
-                                   #        column(width = 6, plotOutput("nnd_plot", height = 250)),
-                                   #        column(width=6, plotOutput("Gfunction", height = 250))
-                                   #    )
-                                   #),
-                                   #fluidRow(
-                                   #    box(width = NULL, status = "warning", title = "Empty-space distance", solidHeader = TRUE, collapsible =  T, collapsed = T,
-                                   #        column(width=6, plotOutput("distmap", height = 250)),
-                                   #        column(width=6, plotOutput("Ffunction", height = 250))
-                                   #    )
-                                   #)
+                                   box(width = NULL, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
+                                       plotlyOutput("env_function", height = 450))
                                    
                                    )
-
                    ),
-                   tabPanel("Cross-type", id=3,
+                   tabPanel("Cross-type",
                             h3("Cross-type Point Patterns"),
-                            fluidRow(
-                                column(width = 6,
-                                       box(width = NULL, status = "warning", title = "Marked Point Patterns", solidHeader = TRUE,
-                                           plotOutput("mpp_plot", height = 320)
-                                       )
-                                ),
-                                column(width = 6,
-                                       box(width = NULL, status = "warning", title = "Summary Functions", solidHeader = TRUE,
-                                           plotOutput("summaryfunction", height = 320)
-                                       )
-                                       )
+                            column(width= 12,
+                                   box(width = NULL, status = "warning", title = "Summary Functions", solidHeader = TRUE,
+                                       plotlyOutput("summaryfunction", height = 450)
+                                   )
                                 )
                             )
-               )
+               ),
+               conditionalPanel( condition = "input.tabbox == 'Cross-type'",
+                                 box(width = NULL, status = "warning", title = "Marked Point Patterns", solidHeader = TRUE, collapsible=T, collapsed=T,
+                                    column(width=6,
+                                           plotOutput("mpp_plot1", height = 350)
+                                           ),
+                                    column(width=6,
+                                           plotOutput("mpp_plot2", height = 350)
+                                           )
+                                     )
+                                 )
+               
                ),
                
                column(width=3, title="Global Filters:",
-                      box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Global Filters",
+                      box(width = NULL, status = "warning", collapsible = T, collapsed = T, solidHeader = F, title = "Global Filters",
                           selectInput("select_country2", "Select Country:", 
                                       choices = c(as.vector(sort(unique(SA_df$country)))),
                                       selected = c("Pakistan")),
@@ -242,28 +232,34 @@ pointpattern <- tabItem(
                                       selected = c("Protests"))
                       ),
                       conditionalPanel( condition = "input.tabbox == 'First-order'",
-                      
-                          box(width = NULL, status = "warning",
-                              checkboxInput("explore_bw", "Explore bandwidth selection:", value = FALSE, width = NULL),
-                              conditionalPanel( condition = "input.explore_bw == true",
-                                                radioButtons("bw_selection", "Bandwidth selection:", 
-                                                             choices = c("Fixed","Adaptive"),
-                                                             selected = c("Fixed")),
-                                                conditionalPanel( condition = "input.bw_selection == 'Fixed'",
-                                                                  radioButtons("fixed_selection", "Fixed-Bandwidth method:", 
-                                                                               choices = c("Automatic","Manual"),
-                                                                               selected = c("Automatic")),
-                                                                  conditionalPanel( condition = "input.fixed_selection == 'Automatic'",
-                                                                                    selectInput("select_autobw", "Cross-validation selection method:", 
-                                                                                                choices = c("bw.diggle","bw.CvL","bw.scott","bw.ppl"),
-                                                                                                selected = c("bw.diggle"))
-                                                                  ),
-                                                                  conditionalPanel( condition = "input.fixed_selection == 'Manual'",
-                                                                                    sliderInput("select_sigma", "Standard deviation of Gaussian Kernel",
-                                                                                                min = 0, max = 50, value = 20, step = 0.1))
-                                                                  )
-                                                )
-                              )
+                                        box(width=NULL, status="warning", title="Color-scale interval",
+                                            sliderInput("select_nclass", "Select number of classes:",
+                                                        min = 5, max = 20, value = 10, step = 1),
+                                            selectInput("select_interval","Select method of determining interval scale:",
+                                                        choices = c("sd", "equal", "pretty", "quantile", "kmeans", "hclust", "bclust", "fisher", "jenks", "log10_pretty"),
+                                                        selected = c("quantile"))
+                                            ),
+                                        box(width = NULL, status = "warning",
+                                            checkboxInput("explore_bw", "Explore bandwidth selection:", value = FALSE, width = NULL),
+                                            conditionalPanel( condition = "input.explore_bw == true",
+                                                              radioButtons("bw_selection", "Bandwidth selection:", 
+                                                                           choices = c("Fixed","Adaptive"),
+                                                                           selected = c("Fixed")),
+                                                              conditionalPanel( condition = "input.bw_selection == 'Fixed'",
+                                                                                radioButtons("fixed_selection", "Fixed-Bandwidth method:", 
+                                                                                             choices = c("Automatic","Manual"),
+                                                                                             selected = c("Automatic")),
+                                                                                conditionalPanel( condition = "input.fixed_selection == 'Automatic'",
+                                                                                                  selectInput("select_autobw", "Cross-validation selection method:", 
+                                                                                                              choices = c("bw.diggle","bw.CvL","bw.scott","bw.ppl"),
+                                                                                                              selected = c("bw.diggle"))
+                                                                                ),
+                                                                                conditionalPanel( condition = "input.fixed_selection == 'Manual'",
+                                                                                                  sliderInput("select_sigma", "Select smoothing parameter value:",
+                                                                                                              min = 0, max = 50, value = 20, step = 0.1))
+                                                              )
+                                            )
+                                        )
                       ),
                       conditionalPanel( condition = "input.tabbox == 'Second-order'",
                                         
@@ -272,27 +268,22 @@ pointpattern <- tabItem(
                                                          choices = c("Pairwise","Nearest-neighbour","Empty-space"),
                                                          selected = c("Pairwise")
                                             ),
-                                            sliderInput("select_radius", "Distance Range (km)",
-                                                        min = 0, max = 50, value = c(0, 20)
-                                            ),
                                             sliderInput("select_nsim", "# Monte Carlo Simulation:",
                                                         min = 0, max = 100, value = 49
                                             ) 
                                             )
                                         ),
                       conditionalPanel( condition = "input.tabbox == 'Cross-type'",
-                                        
+                                        box(width = NULL, status = "warning", 
+                                            selectInput("select_maptype", "Select maptype",
+                                                        choices = c("point symbol","density"),
+                                                        selected = c("point symbol"))
+                                            ),
                                         box(width = NULL, status = "warning", 
                                             selectInput("select_pairtypes", "Select second pair of types",
                                                            choices = c(as.vector(sort(unique(SA_df$event_type)))),
                                                            selected = c("Riots")
                                                         ),
-                                            radioButtons("select_function", "Select Summary Function:", 
-                                                         choices = c("K function",
-                                                                     "G function",
-                                                                     "J function"),
-                                                         selected = c("K function")
-                                            ),
                                             sliderInput("select_nsim2", "# Monte Carlo Simulation:",
                                                         min = 0, max = 50, value = 19
                                             ) 
@@ -635,7 +626,7 @@ server <- function(input, output, session) {
         ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
         
         shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
-        tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = "quantile", n = 10, palette=viridisLite::magma(7)) +
+        tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = input$select_interval, n = input$select_nclass, palette=viridisLite::magma(7)) +
             tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
             tm_shape(shape) +
             tm_borders(alpha=.3, col = "black") +
@@ -645,46 +636,182 @@ server <- function(input, output, session) {
     
 
     
-    output$env_function <- renderPlot({
+    output$env_function <- renderPlotly({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype2)
         ppp_marks_u <- unique(ppp_marks)
         if (input$select_disttype == 'Pairwise'){
-            csr <- envelope(ppp_marks_u, Kest, nsim = input$select_nsim)
+            csr <- envelope(ppp_marks_u, Lest, nsim = input$select_nsim)
+            title <- "Pairwise Distance: L function"
         } else if (input$select_disttype == 'Nearest-neighbour') {
             csr <- envelope(ppp_marks_u, Gest, correction = c("best"), nsim = input$select_nsim)
+            title <- "Nearest-neighbour Distance: G function"
         } else {
             csr <- envelope(ppp_marks_u, Fest, nsim = input$select_nsim)
+            title <- "Empty-space Distance: F function"
         }
         
+        csr_df <- as.data.frame(csr)
+        csr_df <- csr_df[-1,]
+        colour=c("#0D657D","#ee770d","#D3D3D3")
+        csr_plot <- ggplot(csr_df, aes(r, obs))+
+          # plot observed value
+          geom_line(colour=c("#4d4d4d"))+
+          geom_line(aes(r,theo), colour="red", linetype = "dashed")+
+          # plot simulation envelopes
+          geom_ribbon(aes(ymin=lo,ymax=hi),alpha=0.1, colour=c("#91bfdb")) +
+          xlab("Distance r (km)") +
+          ylab("summary statistic") +
+          geom_rug(data= csr_df[csr_df$obs > csr_df$hi,], sides="b", colour=colour[1])  +
+          geom_rug(data= csr_df[csr_df$obs < csr_df$lo,], sides="b", colour=colour[2]) +
+          geom_rug(data= csr_df[csr_df$obs >= csr_df$lo & csr_df$obs <= csr_df$hi,], sides="b", color=colour[3]) +
+          # make it look beautiful
+          theme_tufte() +
+          ggtitle(title)
         
-        plot(csr, main=NULL, xaxt="n", xlim = c(input$select_radius[1],input$select_radius[2]))
+        text1<-"Significant clustering"
+        text2<-"Significant segregation"
+        text3<-"Not significant clustering/segregation"
+        
+        if (nrow(csr_df[csr_df$obs > csr_df$hi,])==0){
+          if (nrow(csr_df[csr_df$obs < csr_df$lo,])==0){
+            ggplotly(csr_plot, dynamicTicks=T) %>%
+              style(text = text3, traces = 4) %>%
+              rangeslider() 
+          }else if (nrow(csr_df[csr_df$obs >= csr_df$lo & csr_df$obs <= csr_df$hi,])==0){
+            ggplotly(csr_plot, dynamicTicks=T) %>%
+              style(text = text2, traces = 4) %>%
+              rangeslider() 
+          }else {
+            ggplotly(csr_plot, dynamicTicks=T) %>%
+              style(text = text2, traces = 4) %>%
+              style(text = text3, traces = 5) %>%
+              rangeslider() 
+          }
+        } else if (nrow(csr_df[csr_df$obs < csr_df$lo,])==0){
+          if (nrow(csr_df[csr_df$obs >= csr_df$lo & csr_df$obs <= csr_df$hi,])==0){
+            ggplotly(csr_plot, dynamicTicks=T) %>%
+              style(text = text1, traces = 4) %>%
+              rangeslider() 
+          } else{
+            ggplotly(csr_plot, dynamicTicks=T) %>%
+              style(text = text1, traces = 4) %>%
+              style(text = text3, traces = 5) %>%
+              rangeslider()
+          }
+        } else{
+          ggplotly(csr_plot, dynamicTicks=T) %>%
+            style(text = text1, traces = 4) %>%
+            style(text = text2, traces = 5) %>%
+            style(text = text3, traces = 6) %>%
+            rangeslider()
+          
+        }
+
     })
     
 
-    output$mpp_plot <- renderPlot({
-        ppp_u <- unique(ppp())
-        ppp_u_m <- split(ppp_u)
-        i <- ppp_u_m[factor=input$select_pairtypes[1]]
-        j <- ppp_u_m[factor=input$select_pairtypes[2]]
-        X <- superimpose(i,
-                         j, 
-                         W=owin())
-        plot(X, main= NULL)
-        
-        
+    output$mpp_plot1 <- renderPlot({
+      
+      
+      ppp_u <- unique(ppp())
+      ppp_u_m <- split(ppp_u)
+      #i <- ppp_u_m[factor=input$select_eventtype2]
+      #j <- ppp_u_m[factor=input$select_pairtypes]
+      #X <- superimpose(i,
+      #                 j, 
+      #                 W=owin())
+      ppp_u_m <- ppp_u_m[factor=input$select_eventtype2]
+      
+      if (input$select_maptype=="point symbol"){
+        plot(ppp_u_m, main="")
+      } else{
+        plot(density(ppp_u_m), main="")
+      }
+
     })
     
-    output$summaryfunction <- renderPlot({
+    
+    output$mpp_plot2 <- renderPlot({
+
+      ppp_u <- unique(ppp())
+      ppp_u_m <- split(ppp_u)
+      #i <- ppp_u_m[factor=input$select_eventtype2]
+      #j <- ppp_u_m[factor=input$select_pairtypes]
+      #X <- superimpose(i,
+      #                 j, 
+      #                 W=owin())
+      ppp_u_m <- ppp_u_m[factor=input$select_pairtypes]
+      
+      if (input$select_maptype=="point symbol"){
+        plot(ppp_u_m, main="")
+      } else{
+        plot(density(ppp_u_m), main="")
+      }
+      
+    })
+    
+    output$summaryfunction <- renderPlotly({
         ppp_u <- unique(ppp())
-        if (input$select_function=="K function") {
-            cross_csr <- envelope(ppp_u, fun=Kcross, nsim=input$select_nsim2, i=input$select_pairtypes[1],j=input$select_pairtypes[2])
-        } else if (input$select_function=="G function") {
-            cross_csr <- envelope(ppp_u, fun=Gcross, nsim=input$select_nsim2, i=input$select_pairtypes[1],j=input$select_pairtypes[2])
-        } else {
-            cross_csr <- envelope(ppp_u, fun=Jcross, nsim=input$select_nsim2, i=input$select_pairtypes[1],j=input$select_pairtypes[2])
+        cross_csr <- envelope(ppp_u, fun=Kcross, nsim=input$select_nsim2, i=input$select_eventtype2,j=input$select_pairtypes)
+        
+        cross_csr_df <- as.data.frame(cross_csr)
+        cross_csr_df <- cross_csr_df[-1,]
+        colour=c("#0D657D","#ee770d","#D3D3D3")
+        cross_csr_plot <- ggplot(cross_csr_df, aes(r, obs))+
+          # plot observed value
+          geom_line(colour=c("#4d4d4d"))+
+          geom_line(aes(r,theo), colour="red", linetype = "dashed")+
+          # plot simulation envelopes
+          geom_ribbon(aes(ymin=lo,ymax=hi),alpha=0.1, colour=c("#91bfdb")) +
+          xlab("Distance r (km)") +
+          ylab("summary statistic") +
+          geom_rug(data=cross_csr_df[cross_csr_df$obs > cross_csr_df$hi,], sides="b", colour=colour[1])  +
+          geom_rug(data=cross_csr_df[cross_csr_df$obs < cross_csr_df$lo,], sides="b", colour=colour[2]) +
+          geom_rug(data=cross_csr_df[cross_csr_df$obs >= cross_csr_df$lo & cross_csr_df$obs <= cross_csr_df$hi,], sides="b", color=colour[3]) +
+          # make it look beautiful
+          theme_tufte() +
+          ggtitle("Cross-Type K function")
+        
+        text1<-"Significant clustering"
+        text2<-"Significant segregation"
+        text3<-"Not significant clustering/segregation"
+        
+        if (nrow(cross_csr_df[cross_csr_df$obs > cross_csr_df$hi,])==0){
+          if (nrow(cross_csr_df[cross_csr_df$obs < cross_csr_df$lo,])==0){
+            ggplotly(cross_csr_plot, dynamicTicks=T) %>%
+              style(text = text3, traces = 4) %>%
+              rangeslider() 
+          }else if (nrow(cross_csr_df[cross_csr_df$obs >= cross_csr_df$lo & cross_csr_df$obs <= cross_csr_df$hi,])==0){
+            ggplotly(cross_csr_plot, dynamicTicks=T) %>%
+              style(text = text2, traces = 4) %>%
+              rangeslider() 
+          }else {
+            ggplotly(cross_csr_plot, dynamicTicks=T) %>%
+              style(text = text2, traces = 4) %>%
+              style(text = text3, traces = 5) %>%
+              rangeslider() 
+          }
+        } else if (nrow(cross_csr_df[cross_csr_df$obs < cross_csr_df$lo,])==0){
+          if (nrow(cross_csr_df[cross_csr_df$obs >= cross_csr_df$lo & cross_csr_df$obs <= cross_csr_df$hi,])==0){
+            ggplotly(cross_csr_plot, dynamicTicks=T) %>%
+              style(text = text1, traces = 4) %>%
+              rangeslider() 
+          } else{
+            ggplotly(cross_csr_plot, dynamicTicks=T) %>%
+              style(text = text1, traces = 4) %>%
+              style(text = text3, traces = 5) %>%
+              rangeslider()
+          }
+        } else{
+          ggplotly(cross_csr_plot, dynamicTicks=T) %>%
+            style(text = text1, traces = 4) %>%
+            style(text = text2, traces = 5) %>%
+            style(text = text3, traces = 6) %>%
+            rangeslider()
+          
         }
         
-        plot(cross_csr, main=paste0(input$select_function))
+
     })
     
     uploadData <- reactive({

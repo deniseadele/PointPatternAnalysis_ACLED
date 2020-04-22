@@ -17,7 +17,8 @@ packages <- c('shiny',
               'rgdal',
               'spatstat',
               'sp',
-              'corrplot')
+              'corrplot',
+              'ggthemes')
 
 for (p in packages){
   if (!require(p,character.only=T)){
@@ -164,6 +165,31 @@ plot(G, cbind(km, rs, theo) ~ r)#, xaxt="n", xlim = c(0,13208))
 G_csr <- envelope(ppp_u_mark , Gest, nsim = 49)
 plot(G_csr)
 
+# ggplot
+Gcsr_df <- as.data.frame(G_csr)
+Gcsr_df2 <- Gcsr_df[-1,]
+colour=c("#d73027", "#ffffbf", "#91bfdb")
+csr_plot <- ggplot(Gcsr_df2, aes(r, obs))+
+  # plot observed value
+  geom_line(colour=c("#4d4d4d"))+
+  geom_line(aes(r,theo), colour="red", linetype = "dashed")+
+  geom_ribbon(aes(ymin=lo,ymax=hi),alpha=0.1, colour=c("#e0e0e0")) +
+  xlab("Distance r (km)") +
+  ylab("summary statistic") +
+  #theme(
+  #  plot.title = element_text(size=14, face="bold.italic"),
+  #  axis.title.x = element_text(size=16, face="bold"),
+  #  axis.title.y = element_text(size=16, face="bold"),
+  #  axis.text = element_text(size=14)
+  #  ) +
+  geom_rug(data=Gcsr_df2[Gcsr_df2$obs > Gcsr_df2$hi,], sides="b", colour=colour[1])  +
+  geom_rug(data=Gcsr_df2[Gcsr_df2$obs < Gcsr_df2$lo,], sides="b", colour=colour[2]) +
+  geom_rug(data=Gcsr_df2[Gcsr_df2$obs >= Gcsr_df2$lo & Gcsr_df2$obs <= Gcsr_df2$hi,], sides="b", color=colour[3]) +
+  theme_tufte()
+
+
+ggplotly(csr_plot, dynamicTicks=T) 
+
 
 # F function
 Ftest <- Fest(ppp_u_mark)
@@ -176,8 +202,18 @@ plot(Fcsr)
 ktest_ <- Kest(ppp_u_mark) # takes awhile to load
 plot(ktest_, main ="Plots all")
 
-Kcsr <- envelope(ppp_u_mark, Kest, nsim = 99)
+Kcsr <- envelope(ppp_u_mark, Kest, nsim = 39)
 plot(Kcsr)
+
+# L function
+Ltest_ <- Lest(ppp_u_mark) # takes awhile to load
+plot(Ltest_, main ="Plots all")
+
+Lcsr <- envelope(ppp_u_mark, Lest, nsim = 19)
+Lcsr_df <- as.data.frame(L_csr)
+Lcsr_df2 <- Lcsr_df[-1,]
+head(Lcsr_df)
+plot(Lcsr)
 
 # All stats 
 # NOTE: this function is only applicable to unmarked patterns
