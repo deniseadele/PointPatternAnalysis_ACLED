@@ -1,4 +1,5 @@
-#packages <- c('shiny','shinydashboard','tidyverse','sf','RColorBrewer','viridis','GADMTools','tmap','leaflet','here','rnaturalearthdata','lubridate','plotly','htmltools','raster','maptools','rgdal','spatstat','sp','ggplot2','anytime','plyr','zoo','DT')
+#packages <- c('shiny','shinydashboard','tidyverse','sf','RColorBrewer','viridis','GADMTools','tmap','leaflet','here','rnaturalearthdata','lubridate','plotly','htmltools','raster','maptools','rgdal','spatstat','sp','ggplot2','anytime','plyr','zoo','DT',
+#              'TH.data','coin','matrixStats','modeltools','multcomp','party','sandwich','strucchange','oompaBase')
 
 #for (p in packages){
 #    if (!require(p,character.only=T)){
@@ -7,8 +8,7 @@
 #    library(p, character.only=T)
 #}
 
-
-library(rsconnect)
+library(devtools)
 library(shiny)
 library(shinydashboard)
 library(tidyverse)
@@ -38,6 +38,9 @@ library(CGPfunctions)
 library(shinyBS)
 library(geoshaper)
 library(ggthemes)
+library(rsconnect)
+library(shinycssloaders)
+library(shinyWidgets)
 
 
 # Reading the raw csv file as a tbl_df
@@ -112,7 +115,7 @@ explore <- tabItem(
                      fluidRow(
                          column(width = 9,
                                 h3("Point Symbol Map"),
-                                leafletOutput("tmap_overview"),
+                                addSpinner(leafletOutput("tmap_overview"), color="#8aa8b5", spin= "fading-circle"),
                                 p("Click the points on the map for more information about the event.")
                          ),
                          column(width = 3,
@@ -135,14 +138,14 @@ explore <- tabItem(
                      fluidRow(
                          column(width = 12,
                                 h4("Explore the data!"),
-                                DT::dataTableOutput("datatable")
+                                addSpinner(DT::dataTableOutput("datatable"), color="#8aa8b5", spin= "fading-circle")
                          )
                      )
             ),
             tabPanel("Ranking",
                      fluidRow(
                          column(width = 9,
-                                plotOutput("slopegraph", height= 500)
+                                addSpinner(plotOutput("slopegraph", height= 500), color="#8aa8b5", spin= "fading-circle")
                          ),
                          column(width = 3,
                                 box(width = NULL, status = "warning",
@@ -158,16 +161,19 @@ explore <- tabItem(
             ),
             tabPanel("Calendar Chart",
                      fluidRow(
-                         column(width = 10,
-                                h3("Time-series Calendar Heatmap"),
-                                plotlyOutput("calendar_view")),
-                         column(width = 2,
-                                box(width = NULL, status = "warning",
-                                    checkboxGroupInput("filter_country", "Filter countries:",
-                                                       choices = c(as.vector(sort(unique(ACLED_SA$country)))),
-                                                       selected = c("Bangladesh","India","Nepal","Pakistan","Sri Lanka"))))
-                     )
-            )
+                       column(width = 9,
+                              h3("Time-series Calendar Heatmap"),
+                              addSpinner(plotlyOutput("calendar_view"),color="#8aa8b5", spin= "fading-circle")),
+                       column(width = 3,
+                              box(width = NULL, status = "warning",
+                                  radioButtons("filter_country", "Filter countries:",
+                                               choices = c("All",as.vector(sort(unique(ACLED_SA$country)))),
+                                               selected = c("All"))),
+                              box(width = NULL, status = "warning",
+                                  checkboxGroupInput("filter_event_type", "Select Conflict Type:",
+                                                     choices = c(as.vector(sort(unique(ACLED_SA$event_type)))),
+                                                     selected = c("Protests"))))
+                     ))
         )
         
     )
@@ -185,14 +191,15 @@ pointpattern <- tabItem(
                             h3("First-order analysis: "),
                             h4("Kernel Density Estimation"),
                             column(width = 12,
-                                   leafletOutput("tmap_kd", height=480))
+                                   addSpinner(leafletOutput("tmap_kd", height=480),color="#8aa8b5", spin= "fading-circle"))
 
                             ),
                    tabPanel("Second-order",
                             h3("Second-order analysis"),
                             column(width = 12,
                                    box(width = NULL, status = "warning", title = "Statistical Inference", solidHeader = TRUE,
-                                       plotlyOutput("env_function", height = 450))
+                                       addSpinner(plotlyOutput("env_function", height = 450),color="#8aa8b5", spin= "fading-circle")
+                                       )
                                    
                                    )
                    ),
@@ -200,7 +207,7 @@ pointpattern <- tabItem(
                             h3("Cross-type Point Patterns"),
                             column(width= 12,
                                    box(width = NULL, status = "warning", title = "Summary Functions", solidHeader = TRUE,
-                                       plotlyOutput("summaryfunction", height = 450)
+                                       addSpinner(plotlyOutput("summaryfunction", height = 450),color="#8aa8b5", spin= "fading-circle")
                                    )
                                 )
                             )
@@ -208,10 +215,10 @@ pointpattern <- tabItem(
                conditionalPanel( condition = "input.tabbox == 'Cross-type'",
                                  box(width = NULL, status = "warning", title = "Marked Point Patterns", solidHeader = TRUE, collapsible=T, collapsed=T,
                                     column(width=6,
-                                           plotOutput("mpp_plot1", height = 350)
+                                           addSpinner(plotOutput("mpp_plot1", height = 350),color="#8aa8b5", spin= "fading-circle")
                                            ),
                                     column(width=6,
-                                           plotOutput("mpp_plot2", height = 350)
+                                           addSpinner(plotOutput("mpp_plot2", height = 350),color="#8aa8b5", spin= "fading-circle")
                                            )
                                      )
                                  )
@@ -297,82 +304,84 @@ pointpattern <- tabItem(
 )
 
 time <- tabItem(
-    tabName = "time",
-    fluidRow(
-        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Global Filters: Region",
-            column(width=2,
-                   box(width = NULL, status = "warning",
-                       selectInput("filter_country1", "Filter countries:",
-                                   choices = c(as.vector(sort(unique(ACLED_SA$country))),"All"),
-                                   selected = c("All")))
-            )
-        )
-    ),
-    fluidRow(
-        column(width = 6,
-               box(width = NULL, status = "warning",
-                   leafletOutput("mymap")),
-               box(width = NULL, status = "warning",
-                   dataTableOutput("mytable"))),
-        column(width = 6,
-               box(width = NULL, status = "warning",
-                   plotlyOutput("stplot")),
-               box(width = NULL, status = "warning",
-                   plotlyOutput("mylinechart")))
-        )
-)
+  tabName = "time",
+  fluidRow(
+    box(width = 12, status = "warning",collapsible = T, solidHeader = F,title="Select points on map and expand on desired visualizations:",
+        column(width = 9,
+               addSpinner(leafletOutput("mymap"),color="#8aa8b5", spin= "fading-circle")),
+        column(width = 3,
+               selectInput("filter_country1", "Filter countries:",
+                           choices = c(as.vector(sort(unique(ACLED_SA$country))),"All"),
+                           selected = c("All")),
+               dateRangeInput("date", "Filter Date Range:",
+                              start=(min(ACLED_SA$event_date)),end=(max(ACLED_SA$event_date)),
+                              min=(min(ACLED_SA$event_date)),max=(max(ACLED_SA$event_date))))
+    )),
+  fluidRow(
+    column(width = 8,
+           box(width = NULL, status = "warning",collapsible = T,collapsed = T, solidHeader = F,title="3D chart showing Time vs Space",
+               addSpinner(plotlyOutput("stplot"),color="#8aa8b5", spin= "fading-circle"))),
+    column(width = 4,
+           box(width = NULL, status = "warning",collapsible = T,collapsed = T, solidHeader = F,title="Line Chart showing Event Trajectory",
+               addSpinner(plotlyOutput("mylinechart"),color="#8aa8b5", spin= "fading-circle")))
+  ),
+  fluidRow(
+    column(width = 12,
+           box(width = NULL, status = "warning",collapsible = T,collapsed = T, solidHeader = F,title="Expand for Data View",
+               addSpinner(dataTableOutput("mytable"),color="#8aa8b5", spin= "fading-circle")))
+  ))
 
 data<-tabItem(
-    tabName = "data",
-    fluidRow(
-        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Load New Dataset",
-            column(width = 12,
-                   fileInput("file1", "Choose CSV File",
-                             multiple = TRUE,
-                             accept = c("text/csv",
-                                        "text/comma-separated-values,text/plain",
-                                        ".csv"))),
-            column(width = 4,
-                   checkboxInput("header", "Header", TRUE)),
-            column(width = 4,
-                   radioButtons("sep", "Separator",
-                                choices = c(Comma = ",",
-                                            Semicolon = ";",
-                                            Tab = "\t"),
-                                selected = ",")),
-            column(width = 4,
-                   radioButtons("quote", "Quote",
-                                choices = c(None = "",
-                                            "Double Quote" = '"',
-                                            "Single Quote" = "'"),
-                                selected = '"')))),
-    fluidRow(
-        box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Data Adjustments",    
-            column(width = 4,
-                   radioButtons("disp", "Display view",
-                                choices = c(Head = "head",
-                                            All = "all"),
-                                selected = "head")),
-            column(width = 4,
-                   downloadButton(outputId = "downloadData", label = "Download Datatset")
-            )
-        )),
-    fluidRow(
-        width = NULL,
-        title = "", height= "1000px",
-        tableOutput("contents")
-    )
+  tabName = "data",
+  fluidRow(
+    box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Load New Dataset",
+        column(width = 12,
+               fileInput("file1", "Choose CSV File",
+                         multiple = TRUE,
+                         accept = c("text/csv",
+                                    "text/comma-separated-values,text/plain",
+                                    ".csv"))),
+        column(width = 4,
+               checkboxInput("header", "Header", TRUE)),
+        column(width = 4,
+               radioButtons("sep", "Separator",
+                            choices = c(Comma = ",",
+                                        Semicolon = ";",
+                                        Tab = "\t"),
+                            selected = ",")),
+        column(width = 4,
+               radioButtons("quote", "Quote",
+                            choices = c(None = "",
+                                        "Double Quote" = '"',
+                                        "Single Quote" = "'"),
+                            selected = '"')))),
+  fluidRow(
+    box(width = NULL, status = "warning", collapsible = T, solidHeader = F, title = "Data Adjustments",    
+        column(width = 4,
+               radioButtons("disp", "Display view",
+                            choices = c(Head = "head",
+                                        All = "all"),
+                            selected = "head")),
+        column(width = 4,
+               downloadButton(outputId = "downloadData", label = "Download Datatset")
+        )
+    )),
+  fluidRow(
+    width = NULL,
+    title = "", height= "1000px",
+    tableOutput("contents")
+  )
 )
 
 
 body <- dashboardBody(
-    tabItems(
-        tabItem(tabName = "home"),
-        explore,
-        pointpattern,
-        time,
-        data
-    )
+  tabItems(
+    tabItem(tabName = "home"),
+    explore,
+    pointpattern,
+    time,
+    data
+  )
 )
 
 ui <- dashboardPage(header, sidebar, body)
@@ -512,36 +521,18 @@ server <- function(input, output, session) {
     })
     
     output$calendar_view <- renderPlotly({
-        ACLED_SA<-uploadData()
+      ACLED_SA<-uploadData()
+      if(input$filter_country=="All"){
+        ACLED_SA_filter<-ACLED_SA
+        ACLED_SA_filter<-ACLED_SA_filter %>%
+          filter(event_type%in% c(as.vector(input$filter_event_type)))
+      }
+      else {
         ACLED_SA_filter<-ACLED_SA %>%
-            filter(country%in% c(as.vector(input$filter_country)))
-        ACLED_clean <- aggregate(ACLED_SA_filter, by = list(ACLED_SA_filter$event_date), FUN = length)
-        colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"Events"
-        
-        ACLED_clean$weekday = as.POSIXlt(anydate(ACLED_clean$Group.1))$wday
-        ACLED_clean$Day_of_week<-factor(ACLED_clean$weekday,levels=rev(0:6),labels=rev(c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),ordered=TRUE) #converting the day no. to factor 
-        ACLED_clean$monthf<-factor(month(anydate(ACLED_clean$Group.1)),levels=as.character(1:12),
-                                   labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),ordered=TRUE) # finding the month 
-        ACLED_clean$yearmonth<- factor(as.yearmon(anydate(ACLED_clean$Group.1))) #finding the year and the month from the date. Eg: Nov 2018 
-        ACLED_clean$week <- as.numeric(format(anydate(ACLED_clean$Group.1),"%W")) #finding the week of the year for each date                           
-        ACLED_clean<-ddply(ACLED_clean,.(yearmonth),transform,Week_of_month=1+week-min(week)) #normalizing the week to start at 1 for every month 
-        
-        ggplot(ACLED_clean, aes(Week_of_month, Day_of_week, fill = Events)) + 
-            geom_tile(colour = "white") + 
-            facet_grid(year(anydate(ACLED_clean$Group.1))~monthf) + 
-            scale_fill_gradient(low="#009ACD", high="#ff0040") + 
-            xlab("Week of Month") + ylab("Day of Week") + 
-            labs(fill = "Events") +
-            theme_bw(base_size=10)+
-            theme(legend.title=element_blank(),
-                  panel.border=element_blank(),
-                  axis.ticks=element_blank(),
-                  strip.background=element_blank(),
-                  legend.position="top",
-                  legend.justification="right",
-                  legend.direction="horizontal",
-                  legend.key.size=unit(0.3,"cm"),
-                  legend.spacing.x=unit(0.1,"cm"))
+          filter(country%in% c(as.vector(input$filter_country)))
+        ACLED_SA_filter<- ACLED_SA_filter %>%    
+          filter(event_type%in% c(as.vector(input$filter_event_type)))
+      }
     })
     
     sh <- reactive({
@@ -715,11 +706,6 @@ server <- function(input, output, session) {
       
       ppp_u <- unique(ppp())
       ppp_u_m <- split(ppp_u)
-      #i <- ppp_u_m[factor=input$select_eventtype2]
-      #j <- ppp_u_m[factor=input$select_pairtypes]
-      #X <- superimpose(i,
-      #                 j, 
-      #                 W=owin())
       ppp_u_m <- ppp_u_m[factor=input$select_eventtype2]
       
       if (input$select_maptype=="point symbol"){
@@ -815,169 +801,193 @@ server <- function(input, output, session) {
     })
     
     uploadData <- reactive({
-        infile<-input$file1
-        df2<-read_csv("data/2016-01-01-2019-12-31-Southern_Asia.csv")
-        df2<- subset(df2,select=-c(notes))
-        if(is.null(infile))
-        {
-            return(df2)
-        }
-        else{
-            df<-read.csv(infile$datapath,header=input$header,sep=input$sep,quote=input$quote)
-            return(df)
-        }
+      infile<-input$file1
+      df2<-read_csv("data/2016-01-01-2019-12-31-Southern_Asia.csv")
+      df2<- subset(df2,select=-c(notes))
+      if(is.null(infile))
+      {
+        return(df2)
+      }
+      else{
+        df<-read.csv(infile$datapath,header=input$header,sep=input$sep,quote=input$quote)
+        return(df)
+      }
     })
     
     
     output$contents<-renderTable({
-        df <- uploadData() 
-        if(input$disp=="head")
-        {
-            return(head(df))
-        }
-        return(df)
+      df <- uploadData() 
+      if(input$disp=="head")
+      {
+        return(head(df))
+      }
+      return(df)
     })
     
     output$downloadData <- downloadHandler(
-        filename = "data/2016-01-01-2019-12-31-Southern_Asia.csv",
-        content = function(file) {
-            # The code for filtering the data is copied from the
-            # renderTable() function
-            data <- uploadData()
-            # Write the filtered data into a CSV file
-            write_csv(head(data), file)
-        }
+      filename = "data/2016-01-01-2019-12-31-Southern_Asia.csv",
+      content = function(file) {
+        data <- uploadData()
+        write_csv(head(data), file)
+      }
     )
     
-    # Spatio-temporal
-    ################################################# section one #################################################
-    # list to store the selections for tracking
     data_of_click <- reactiveValues(clickedMarker = list())
     
-    ################################################# section two #################################################
-    ACLED_SA <- subset(ACLED_SA,select=-c(notes))
-    ACLED_SA$secondLocationID <- paste(as.character(ACLED_SA$data_id), "_selectedLayer", sep="")
-    coordinates <- SpatialPointsDataFrame(ACLED_SA[,c('longitude', 'latitude')] , ACLED_SA)
-    
-    # base map
     output$mymap <- renderLeaflet({
-        if(input$filter_country1=="All"){
-            ACLED_SA<-ACLED_SA
-            #ACLED_SA$event_date<- as.Date(ACLED_SA$event_date, format = "%d %B %Y")
-            #ACLED_SA<-ACLED_SA %>%
-            #  filter(event_date %in% c(as.Date(input$date)))
-        }
-        else{
-            ACLED_SA<-ACLED_SA %>%
-                filter(country%in% c(as.vector(input$filter_country1)))
-            #ACLED_SA$event_date<- as.Date(ACLED_SA$event_date, format = "%d %B %Y")
-            #ACLED_SA<-ACLED_SA %>%
-            #  filter(event_date %in% c(as.Date(input$date)))
-        }
-        leaflet() %>%
-            addTiles() %>%
-            addProviderTiles(providers$CartoDB.Positron) %>%
-            addCircles(data = ACLED_SA,
-                       radius = 1000,
-                       lat = ACLED_SA$latitude,
-                       lng = ACLED_SA$longitude,
-                       fillColor = "red",
-                       fillOpacity = 1,
-                       color = "black",
-                       weight = 1,
-                       stroke = T,
-                       layerId = as.character(ACLED_SA$data_id),
-                       highlightOptions = highlightOptions(color = "mediumseagreen",
-                                                           opacity = 1.0,
-                                                           weight = 2,
-                                                           bringToFront = TRUE)) %>%
-            addDrawToolbar(
-                targetGroup='Selected',
-                polylineOptions=FALSE,
-                markerOptions = FALSE,
-                polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0
-                                                                                  ,color = 'grey'
-                                                                                  ,weight = 2)),
-                rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0
-                                                                                      ,color = 'grey'
-                                                                                      ,weight = 2)),
-                circleOptions = drawCircleOptions(shapeOptions = drawShapeOptions(fillOpacity = 0
-                                                                                  ,color = 'grey'
-                                                                                  ,weight = 2)),
-                editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions()))
+      if(input$filter_country1=="All"){
+        ACLED_SA<-ACLED_SA
+        ACLED_SA<-subset(ACLED_SA, ACLED_SA$event_date >= min(as.Date(input$date)) & 
+                           ACLED_SA$event_date <= max((input$date)))      }
+      else{
+        ACLED_SA<-ACLED_SA %>%
+          filter(country%in% c(as.vector(input$filter_country1)))
+        ACLED_SA<-subset(ACLED_SA, ACLED_SA$event_date >= min(as.Date(input$date)) & 
+                           ACLED_SA$event_date <= max((input$date)))
+      }
+      leaflet() %>%
+        addTiles() %>%
+        addProviderTiles(providers$CartoDB.Positron) %>%
+        addCircles(data = ACLED_SA,
+                   radius = 1000,
+                   lat = ACLED_SA$latitude,
+                   lng = ACLED_SA$longitude,
+                   fillColor = "red",
+                   fillOpacity = 1,
+                   color = "black",
+                   weight = 1,
+                   stroke = T,
+                   layerId = as.character(ACLED_SA$data_id),
+                   highlightOptions = highlightOptions(color = "mediumseagreen",
+                                                       opacity = 1.0,
+                                                       weight = 2,
+                                                       bringToFront = TRUE)) %>%
+        addDrawToolbar(
+          targetGroup='Selected',
+          polylineOptions=FALSE,
+          markerOptions = FALSE,
+          polygonOptions = drawPolygonOptions(shapeOptions=drawShapeOptions(fillOpacity = 0
+                                                                            ,color = 'grey'
+                                                                            ,weight = 2)),
+          rectangleOptions = drawRectangleOptions(shapeOptions=drawShapeOptions(fillOpacity = 0
+                                                                                ,color = 'grey'
+                                                                                ,weight = 2)),
+          circleOptions = drawCircleOptions(shapeOptions = drawShapeOptions(fillOpacity = 0
+                                                                            ,color = 'grey'
+                                                                            ,weight = 2)),
+          editOptions = editToolbarOptions(edit = FALSE, selectedPathOptions = selectedPathOptions()))
     })
     
-    ############################################### section three #################################################
     
     observeEvent(input$mymap_draw_new_feature,{
-        #Only add new layers for bounded locations
-        found_in_bounds <- findLocations(shape = input$mymap_draw_new_feature
-                                         , location_coordinates = coordinates
-                                         , location_id_colname = "data_id")
-        
-        for(id in found_in_bounds){
-            if(id %in% data_of_click$clickedMarker){
-                # don't add id
-            } else {
-                # add id
-                data_of_click$clickedMarker<-append(data_of_click$clickedMarker, id, 0)
-            }
+      if(input$filter_country1=="All"){
+        ACLED_SA<-ACLED_SA
+        ACLED_SA<-subset(ACLED_SA, ACLED_SA$event_date >= min(as.Date(input$date)) & 
+                           ACLED_SA$event_date <= max((input$date)))      }
+      else{
+        ACLED_SA<-ACLED_SA %>%
+          filter(country%in% c(as.vector(input$filter_country1)))
+        ACLED_SA<-subset(ACLED_SA, ACLED_SA$event_date >= min(as.Date(input$date)) & 
+                           ACLED_SA$event_date <= max((input$date)))
+      }
+      
+      found_in_bounds <- findLocations(shape = input$mymap_draw_new_feature
+                                       , location_coordinates = coordinates
+                                       , location_id_colname = "data_id")
+      
+      for(id in found_in_bounds){
+        if(id %in% data_of_click$clickedMarker){
+          # don't add id
+        } else {
+          # add id
+          data_of_click$clickedMarker<-append(data_of_click$clickedMarker, id, 0)
         }
+      }
+      
+      selected <- subset(ACLED_SA, data_id %in% data_of_click$clickedMarker)
+      m<-highlight_key(selected,~event_type)
+      
+      proxy <- leafletProxy("mymap")
+      proxy %>% addCircles(data = selected,
+                           radius = 1000,
+                           lat = selected$latitude,
+                           lng = selected$longitude,
+                           fillColor = "wheat",
+                           fillOpacity = 1,
+                           color = "mediumseagreen",
+                           weight = 3,
+                           stroke = T,
+                           layerId = as.character(selected$secondLocationID),
+                           highlightOptions = highlightOptions(color = "hotpink",
+                                                               opacity = 1.0,
+                                                               weight = 2,
+                                                               bringToFront = TRUE))
+      
+      output$mytable <- renderDataTable(
+        selected, options = list(scrollX = TRUE))
+      
+      output$stplot <- renderPlotly({
         
-        # look up airports by ids found
-        selected <- subset(ACLED_SA, data_id %in% data_of_click$clickedMarker)
+        plot_ly(m, x = selected$longitude, y = selected$latitude, z = selected$event_date, color=selected$event_type, 
+                marker=list(size=5,alpha=0.1, 
+                            line=list(color = "grey",width=1,alpha=0.2)),
+                text = ~paste("ID:", selected$data_id,
+                              "\nEvent type:", selected$event_type),
+                hovertemplate = paste(
+                  "<b>%{text}</b><br>",
+                  "Event Date: %{z}",
+                  "<extra></extra>")
+        ) %>%
+          add_markers() %>%
+          layout(scene = list(xaxis = list(title = 'Longitude'),
+                              yaxis = list(title = 'Latitude'),
+                              zaxis = list(title = 'Event Date'))) %>%
+          highlight("plotly_hover")
+      })
+      
+      output$mylinechart <- renderPlotly({
         
-        proxy <- leafletProxy("mymap")
-        proxy %>% addCircles(data = selected,
-                             radius = 1000,
-                             lat = selected$latitude,
-                             lng = selected$longitude,
-                             fillColor = "wheat",
-                             fillOpacity = 1,
-                             color = "mediumseagreen",
-                             weight = 3,
-                             stroke = T,
-                             layerId = as.character(selected$secondLocationID),
-                             highlightOptions = highlightOptions(color = "hotpink",
-                                                                 opacity = 1.0,
-                                                                 weight = 2,
-                                                                 bringToFront = TRUE))
-        
-        output$mytable <- renderDataTable(
-            selected, options = list(scrollX = TRUE))
-        
-        output$stplot <- renderPlotly({
-            
-            plot_ly(selected, x = selected$longitude, y = selected$latitude, z = selected$event_date, color=selected$event_type, 
-                    text = ~paste("ID:", selected$data_id,
-                                  "\nEvent type:", selected$event_type),
-                    hovertemplate = paste(
-                        "<b>%{text}</b><br>",
-                        "Event Date: %{z}",
-                        "<extra></extra>")
-            ) %>%
-                add_markers() %>%
-                layout(scene = list(xaxis = list(title = 'Longitude'),
-                                    yaxis = list(title = 'Latitude'),
-                                    zaxis = list(title = 'Event Date')),showlegend=FALSE)
-        })
-        
-        output$mylinechart <- renderPlotly({
-            
-            ACLED_clean <- aggregate(selected, by = list(selected$event_date), FUN = length)
-            colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"No. of Events"
-            ACLED_clean$Group.1<-anydate(ACLED_clean$Group.1)
-            colnames(ACLED_clean)[grep("Group.1", colnames(ACLED_clean))] <-"Event Date"
-            ggplot(ACLED_clean, aes(x=`Event Date`, y=`No. of Events`)) +
-                geom_line( color="steelblue") + 
-                geom_point() +
-                theme(axis.text.x=element_text(angle=60, hjust=1)) +
-                theme_minimal()
-        })
-        
-        
-        
+        ACLED_clean <- aggregate(selected, by = list(selected$event_date), FUN = length)
+        colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"No. of Events"
+        ACLED_clean$Group.1<-anydate(ACLED_clean$Group.1)
+        colnames(ACLED_clean)[grep("Group.1", colnames(ACLED_clean))] <-"Event Date"
+        ggplot(ACLED_clean, aes(x=`Event Date`, y=`No. of Events`)) +
+          geom_line(color="steelblue") + 
+          geom_point(alpha=0.8,size=1,color="dark grey") +
+          theme(axis.text.x=element_text(angle=60, hjust=1)) +
+          theme_minimal()
+      })
+      
+      
+      
     })
     
+    observeEvent(input$mymap_draw_deleted_features,{
+      if(input$filter_country1=="All"){
+        ACLED_SA<-ACLED_SA
+        ACLED_SA<-subset(ACLED_SA, ACLED_SA$event_date >= min(as.Date(input$date)) & 
+                           ACLED_SA$event_date <= max((input$date)))      }
+      else{
+        ACLED_SA<-ACLED_SA %>%
+          filter(country%in% c(as.vector(input$filter_country1)))
+        ACLED_SA<-subset(ACLED_SA, ACLED_SA$event_date >= min(as.Date(input$date)) & 
+                           ACLED_SA$event_date <= max((input$date)))
+      }
+      for(feature in input$mymap_draw_deleted_features$features){
+        
+        bounded_layer_ids <- findLocations(shape = feature
+                                           , location_coordinates = coordinates
+                                           , location_id_colname = "secondLocationID")
+        
+        
+        proxy <- leafletProxy("mymap")
+        proxy %>% removeShape(layerId = as.character(bounded_layer_ids))
+        
+        first_layer_ids <- subset(ACLED_SA, secondLocationID %in% bounded_layer_ids)$data_id
+        
+        data_of_click$clickedMarker <- data_of_click$clickedMarker[!data_of_click$clickedMarker
+                                                                   %in% first_layer_ids]
+      }
+    })  
 }
 shiny::shinyApp(ui, server)
