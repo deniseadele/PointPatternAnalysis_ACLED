@@ -75,7 +75,7 @@ kd_adap <- adaptive.density(ppp_marks)
 ras_adap <- raster(kd_adap, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
 
 # FIXED
-kd <- density(ppp_marks)
+kd <- density(ppp_marks,method="kernel")
 kd10 <- density(ppp_marks, sigma=10) # manual selection of sigma
 kd_diggle <- density(ppp_marks, bw.diggle(ppp_marks)) # bandwidth selection using cross-validation method
 

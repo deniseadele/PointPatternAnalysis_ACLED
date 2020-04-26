@@ -94,14 +94,35 @@ if (!file.exists(paste0(here::here(),"/Data/prepared_files/SA_sh.rds"))){
 }
 
 
+# Save the geopackage as rds file
+PAK_sh <- readOGR(dsn = paste0(here::here(), "/Data2/geopackage/gadm36_PAK.gpkg"), layer="gadm36_PAK_1")
+BGD_sh <- readOGR(dsn = paste0(here::here(), "/Data2/geopackage/gadm36_BGD.gpkg"), layer="gadm36_BGD_1")
+LKA_sh <- readOGR(dsn = paste0(here::here(), "/Data2/geopackage/gadm36_LKA.gpkg"), layer="gadm36_LKA_1")
+NPL_sh <- readOGR(dsn = paste0(here::here(), "/Data2/geopackage/gadm36_NPL.gpkg"), layer="gadm36_NPL_1")
+IND_sh <- readOGR(dsn = paste0(here::here(), "/Data2/geopackage/gadm36_IND.gpkg"), layer="gadm36_IND_1")
+
+if (!file.exists(paste0(here::here(),"/Data/prepared_files/PAK_sh.rds"))){
+  saveRDS(PAK_sh, paste0(here::here(),"/Data/prepared_files/PAK_sh.rds"))
+}
+
+if (!file.exists(paste0(here::here(),"/Data/prepared_files/BGD_sh.rds"))){
+  saveRDS(BGD_sh, paste0(here::here(),"/Data/prepared_files/BGD_sh.rds"))
+}
+
+if (!file.exists(paste0(here::here(),"/Data/prepared_files/LKA_sh.rds"))){
+  saveRDS(LKA_sh, paste0(here::here(),"/Data/prepared_files/LKA_sh.rds"))
+}
+
+if (!file.exists(paste0(here::here(),"/Data/prepared_files/NPL_sh.rds"))){
+  saveRDS(NPL_sh, paste0(here::here(),"/Data/prepared_files/NPL_sh.rds"))
+}
+
+if (!file.exists(paste0(here::here(),"/Data/prepared_files/IND_sh.rds"))){
+  saveRDS(IND_sh, paste0(here::here(),"/Data/prepared_files/IND_sh.rds"))
+}
+
 
 # PREPARE PPP FOR EACH COUNTRY
-PAK_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_PAK.gpkg"), layer="gadm36_PAK_1")
-BGD_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_BGD.gpkg"), layer="gadm36_BGD_1")
-LKA_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_LKA.gpkg"), layer="gadm36_LKA_1")
-NPL_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_NPL.gpkg"), layer="gadm36_NPL_1")
-IND_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_IND.gpkg"), layer="gadm36_IND_1")
-
 # convert to spatial polygons object
 PAK_poly <- as(PAK_sh, "SpatialPolygons")
 BGD_poly <- as(BGD_sh, "SpatialPolygons")

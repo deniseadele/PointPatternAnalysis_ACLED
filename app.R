@@ -8,6 +8,8 @@
 #    library(p, character.only=T)
 #}
 
+#install.packages('CGPfunctions', dependencies=TRUE, repos='http://cran.rstudio.com/')
+
 library(devtools)
 library(shiny)
 library(shinydashboard)
@@ -41,10 +43,19 @@ library(ggthemes)
 library(rsconnect)
 library(shinycssloaders)
 library(shinyWidgets)
-
+library(BiocManager)
+library(rsconnect)
 
 # Reading the raw csv file as a tbl_df
 ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
+ACLED_SA <- ACLED_SA %>%
+  mutate(event_date=parse_date(event_date, "%d %B %Y"))%>%
+  mutate(month=month(event_date)) %>%
+  mutate(monyear = as.Date(paste0(year,"-",month, "-01"),"%Y-%m-%d"))
+
+ACLED_SA <- subset(ACLED_SA,select=-c(notes))
+ACLED_SA$secondLocationID <- paste(as.character(ACLED_SA$data_id), "_selectedLayer", sep="")
+coordinates <- SpatialPointsDataFrame(ACLED_SA[,c('longitude', 'latitude')] , ACLED_SA)
 
 # Read in aspatial dataframe
 SA_df <- readRDS("Data/prepared_files/SA_df.rds")
@@ -60,11 +71,12 @@ SA_sh <- readRDS("Data/prepared_files/SA_sh.rds")
 SA_sp <- readRDS("Data/prepared_files/SA_sp.rds")
 
 # read in SA geopackage and convert to sp object
-PAK_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_PAK.gpkg"), layer="gadm36_PAK_1")
-BGD_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_BGD.gpkg"), layer="gadm36_BGD_1")
-LKA_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_LKA.gpkg"), layer="gadm36_LKA_1")
-NPL_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_NPL.gpkg"), layer="gadm36_NPL_1")
-IND_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_IND.gpkg"), layer="gadm36_IND_1")
+
+PAK_sh <- readRDS("Data/prepared_files/PAK_sh.rds")
+BGD_sh <- readRDS("Data/prepared_files/BGD_sh.rds")
+LKA_sh <- readRDS("Data/prepared_files/LKA_sh.rds")
+NPL_sh <- readRDS("Data/prepared_files/NPL_sh.rds")
+IND_sh <- readRDS("Data/prepared_files/IND_sh.rds")
 
 # read in ppp objects
 PAK_ppp <- readRDS("Data/prepared_files/PAK_ppp.rds")
@@ -189,7 +201,7 @@ pointpattern <- tabItem(
                    title = "", height= "650px", id = "tabbox",
                    tabPanel("First-order",
                             h3("First-order analysis: "),
-                            h4("Kernel Density Estimation"),
+                            h4("Kernel Estimation of Intensity"),
                             column(width = 12,
                                    addSpinner(leafletOutput("tmap_kd", height=480),color="#8aa8b5", spin= "fading-circle"))
 
@@ -225,7 +237,7 @@ pointpattern <- tabItem(
                
                ),
                
-               column(width=3, title="Global Filters:",
+               column(width=3, title="",
                       box(width = NULL, status = "warning", collapsible = T, collapsed = T, solidHeader = F, title = "Global Filters",
                           selectInput("select_country2", "Select Country:", 
                                       choices = c(as.vector(sort(unique(SA_df$country)))),
@@ -252,6 +264,7 @@ pointpattern <- tabItem(
                                                               radioButtons("bw_selection", "Bandwidth selection:", 
                                                                            choices = c("Fixed","Adaptive"),
                                                                            selected = c("Fixed")),
+                                                              bsTooltip(id = "bw_selection", title = "Warning! Adaptive kernel smoothing algorithm will take some time to complete", placement = "bottom",trigger = "hover",options = list(container = "body")),
                                                               conditionalPanel( condition = "input.bw_selection == 'Fixed'",
                                                                                 radioButtons("fixed_selection", "Fixed-Bandwidth method:", 
                                                                                              choices = c("Automatic","Manual"),
@@ -276,7 +289,7 @@ pointpattern <- tabItem(
                                                          selected = c("Pairwise")
                                             ),
                                             sliderInput("select_nsim", "# Monte Carlo Simulation:",
-                                                        min = 0, max = 100, value = 49
+                                                        min = 0, max = 100, value = 39
                                             ) 
                                             )
                                         ),
@@ -295,7 +308,8 @@ pointpattern <- tabItem(
                                                         min = 0, max = 50, value = 19
                                             ) 
                                         )
-                                        )
+                                        ),
+                      actionButton("button", "Apply Changes")
                       
                       
                       )
@@ -374,9 +388,19 @@ data<-tabItem(
 )
 
 
+home<-tabItem(
+  tabName = "home",
+  fluidRow(
+    column(12, align="center",
+           h1("Welcome to ACLED point pattern app!"),
+           div(style="display: inline-block;",img(src='home.png', width="100%"))
+           )
+  )
+)
+
 body <- dashboardBody(
   tabItems(
-    tabItem(tabName = "home"),
+    home,
     explore,
     pointpattern,
     time,
@@ -586,31 +610,34 @@ server <- function(input, output, session) {
   
     
     output$tmap_kd <- renderLeaflet({
-
+      
+      input$button
+      
+      isolate({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype2)
         
         if (input$explore_bw & (input$bw_selection =="Fixed")){
-            if (input$fixed_selection =="Automatic"){
-                if (input$select_autobw == "bw.diggle"){
-                    bw <- bw.diggle(ppp_marks)
-                } else if(input$select_autobw  == "bw.CvL"){
-                    bw <- bw.CvL(ppp_marks)
-                } else if(input$select_autobw  == "bw.scott"){
-                    bw <- bw.scott(ppp_marks)
-                } else {
-                    bw <- bw.ppl(ppp_marks)
-                } 
-            } else{
-                bw <- input$select_sigma
-            }
-            
-            kd <- density(ppp_marks, sigma = bw, adjust = 1, kernel = "gaussian")
-            
+          if (input$fixed_selection =="Automatic"){
+            if (input$select_autobw == "bw.diggle"){
+              bw <- bw.diggle(ppp_marks)
+            } else if(input$select_autobw  == "bw.CvL"){
+              bw <- bw.CvL(ppp_marks)
+            } else if(input$select_autobw  == "bw.scott"){
+              bw <- bw.scott(ppp_marks)
+            } else {
+              bw <- bw.ppl(ppp_marks)
+            } 
+          } else{
+            bw <- input$select_sigma
+          }
+          
+          kd <- density(ppp_marks, sigma = bw, adjust = 1, kernel = "gaussian")
+          
         } else if (input$explore_bw & (input$bw_selection =="Adaptive")){
-            kd <- adaptive.density(ppp_marks, method="kernel")
+          kd <- adaptive.density(ppp_marks, method="kernel")
         } else {
-            bw <- NULL
-            kd <- density(ppp_marks, sigma = bw, adjust = 1, kernel = "gaussian")
+          bw <- NULL
+          kd <- density(ppp_marks, sigma = bw, adjust = 1, kernel = "gaussian")
         }
         
         
@@ -618,27 +645,32 @@ server <- function(input, output, session) {
         
         shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
         tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = input$select_interval, n = input$select_nclass, palette=viridisLite::magma(7)) +
-            tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
-            tm_shape(shape) +
-            tm_borders(alpha=.3, col = "black") +
-            tm_fill(col="NAME_1", alpha=0, id="NAME_1", title= "State",legend.show=FALSE)
+          tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
+          tm_shape(shape) +
+          tm_borders(alpha=.3, col = "black") +
+          tm_fill(col="NAME_1", alpha=0, id="NAME_1", title= "State",legend.show=FALSE)
         tmap_leaflet(tmap_kd)
+        
+      })
     })
     
 
     
     output$env_function <- renderPlotly({
+      
+      input$button
+      isolate({
         ppp_marks <- subset(ppp(), marks == input$select_eventtype2)
         ppp_marks_u <- unique(ppp_marks)
         if (input$select_disttype == 'Pairwise'){
-            csr <- envelope(ppp_marks_u, Lest, nsim = input$select_nsim)
-            title <- "Pairwise Distance: L function"
+          csr <- envelope(ppp_marks_u, Lest, nsim = input$select_nsim)
+          title <- "Pairwise Distance: L function"
         } else if (input$select_disttype == 'Nearest-neighbour') {
-            csr <- envelope(ppp_marks_u, Gest, correction = c("best"), nsim = input$select_nsim)
-            title <- "Nearest-neighbour Distance: G function"
+          csr <- envelope(ppp_marks_u, Gest, correction = c("best"), nsim = input$select_nsim)
+          title <- "Nearest-neighbour Distance: G function"
         } else {
-            csr <- envelope(ppp_marks_u, Fest, nsim = input$select_nsim)
-            title <- "Empty-space Distance: F function"
+          csr <- envelope(ppp_marks_u, Fest, nsim = input$select_nsim)
+          title <- "Empty-space Distance: F function"
         }
         
         csr_df <- as.data.frame(csr)
@@ -697,46 +729,53 @@ server <- function(input, output, session) {
             rangeslider()
           
         }
-
+        
+      })
     })
-    
-
-    output$mpp_plot1 <- renderPlot({
       
       
-      ppp_u <- unique(ppp())
-      ppp_u_m <- split(ppp_u)
-      ppp_u_m <- ppp_u_m[factor=input$select_eventtype2]
-      
-      if (input$select_maptype=="point symbol"){
-        plot(ppp_u_m, main="")
-      } else{
-        plot(density(ppp_u_m), main="")
-      }
-
+      output$mpp_plot1 <- renderPlot({
+        input$button
+        isolate({
+          ppp_u <- unique(ppp())
+          ppp_u_m <- split(ppp_u)
+          ppp_u_m <- ppp_u_m[factor=input$select_eventtype2]
+          
+          if (input$select_maptype=="point symbol"){
+            plot(ppp_u_m, main="")
+          } else{
+            plot(density(ppp_u_m), main="")
+          }
+        })
+        
     })
     
     
     output$mpp_plot2 <- renderPlot({
+      input$button
+      isolate({
+        ppp_u <- unique(ppp())
+        ppp_u_m <- split(ppp_u)
+        #i <- ppp_u_m[factor=input$select_eventtype2]
+        #j <- ppp_u_m[factor=input$select_pairtypes]
+        #X <- superimpose(i,
+        #                 j, 
+        #                 W=owin())
+        ppp_u_m <- ppp_u_m[factor=input$select_pairtypes]
+        
+        if (input$select_maptype=="point symbol"){
+          plot(ppp_u_m, main="")
+        } else{
+          plot(density(ppp_u_m), main="")
+        }
+        
+      })
 
-      ppp_u <- unique(ppp())
-      ppp_u_m <- split(ppp_u)
-      #i <- ppp_u_m[factor=input$select_eventtype2]
-      #j <- ppp_u_m[factor=input$select_pairtypes]
-      #X <- superimpose(i,
-      #                 j, 
-      #                 W=owin())
-      ppp_u_m <- ppp_u_m[factor=input$select_pairtypes]
-      
-      if (input$select_maptype=="point symbol"){
-        plot(ppp_u_m, main="")
-      } else{
-        plot(density(ppp_u_m), main="")
-      }
-      
     })
     
     output$summaryfunction <- renderPlotly({
+      input$button
+      isolate({
         ppp_u <- unique(ppp())
         cross_csr <- envelope(ppp_u, fun=Kcross, nsim=input$select_nsim2, i=input$select_eventtype2,j=input$select_pairtypes)
         
@@ -796,8 +835,8 @@ server <- function(input, output, session) {
             rangeslider()
           
         }
-        
-
+      })
+   
     })
     
     uploadData <- reactive({
