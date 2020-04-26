@@ -111,7 +111,7 @@ sidebar <- dashboardSidebar(
         menuItem("Exploratory",tabName = "explore", icon = icon("chart-bar")),
         menuItem("Point Pattern Analysis",tabName = "pointpattern", icon = icon("globe-asia")),
         menuItem("Spatio-Temporal Analysis",tabName = "time", icon=icon("calendar-alt")),
-        menuItem("Load Data",tabName = "data", icon=icon("table"))
+        menuItem("Data Explore",tabName = "data", icon=icon("table"))
     )
 )
 
@@ -560,6 +560,35 @@ server <- function(input, output, session) {
         ACLED_SA_filter<- ACLED_SA_filter %>%    
           filter(event_type%in% c(as.vector(input$filter_event_type)))
       }
+      
+      ACLED_clean <- aggregate(ACLED_SA_filter, by = list(ACLED_SA_filter$event_date), FUN = length)
+      colnames(ACLED_clean)[grep("data_id", colnames(ACLED_clean))] <-"Events"
+      
+      ACLED_clean$Group.1<- as.Date(ACLED_clean$Group.1, format = "%d %B %Y")
+      ACLED_clean$weekday = as.POSIXlt(ACLED_clean$Group.1)$wday
+      ACLED_clean$Day_of_week<-factor(ACLED_clean$weekday,levels=rev(0:6),labels=rev(c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),ordered=TRUE) #converting the day no. to factor 
+      ACLED_clean$monthf<-factor(month(ACLED_clean$Group.1),levels=as.character(1:12),
+                                 labels=c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"),ordered=TRUE) # finding the month 
+      ACLED_clean$yearmonth<- factor(as.yearmon(ACLED_clean$Group.1)) #finding the year and the month from the date. Eg: Nov 2018 
+      ACLED_clean$week <- as.numeric(format(ACLED_clean$Group.1,"%W")) #finding the week of the year for each date                           
+      ACLED_clean<-ddply(ACLED_clean,.(yearmonth),transform,Week_of_month=1+week-min(week)) #normalizing the week to start at 1 for every month 
+      
+      ggplot(ACLED_clean, aes(Week_of_month, Day_of_week, fill = Events)) + 
+        geom_tile(colour = "white") + 
+        facet_grid(year(ACLED_clean$Group.1)~monthf) + 
+        scale_fill_gradient(low="#FFDAB9", high="#ff0040") + 
+        xlab("Week of Month") + ylab("Day of Week") + 
+        labs(fill = "Events") +
+        theme_bw(base_size=10)+
+        theme(legend.title=element_blank(),
+              panel.border=element_blank(),
+              axis.ticks=element_blank(),
+              strip.background=element_blank(),
+              legend.position="top",
+              legend.justification="right",
+              legend.direction="horizontal",
+              legend.key.size=unit(0.3,"cm"),
+              legend.spacing.x=unit(0.1,"cm"))
     })
     
     sh <- reactive({
