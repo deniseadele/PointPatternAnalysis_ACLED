@@ -1,31 +1,50 @@
+#packages <- c('shiny','shinydashboard','tidyverse','sf','RColorBrewer','viridis','GADMTools','tmap','leaflet','here','rnaturalearthdata','lubridate','plotly','htmltools','raster','maptools','rgdal','spatstat','sp','ggplot2','anytime','plyr','zoo','DT',
+#              'TH.data','coin','matrixStats','modeltools','multcomp','party','sandwich','strucchange','oompaBase')
 
-packages <- c('shiny',
-              'shinydashboard',
-              'tidyverse',
-              'sf',
-              'RColorBrewer',
-              'viridis',
-              'GADMTools',
-              'tmap',
-              'leaflet',
-              'here',
-              'rnaturalearthdata',
-              'lubridate',
-              'plotly',
-              'htmltools',
-              'raster',
-              'maptools',
-              'rgdal',
-              'spatstat',
-              'sp',
-              'CGPfunctions')
+#for (p in packages){
+#    if (!require(p,character.only=T)){
+#        install.packages(p)
+#    }
+#    library(p, character.only=T)
+#}
 
-for (p in packages){
-  if (!require(p,character.only=T)){
-    install.packages(p)
-  }
-  library(p, character.only=T)
-}
+#install.packages('CGPfunctions', dependencies=TRUE, repos='http://cran.rstudio.com/')
+
+library(devtools)
+library(shiny)
+library(shinydashboard)
+library(tidyverse)
+library(sf)
+library(RColorBrewer)
+library(viridis)
+library(GADMTools)
+library(tmap)
+library(leaflet)
+library(leaflet.extras)
+library(here)
+library(rnaturalearthdata)
+library(lubridate)
+library(plotly)
+library(htmltools)
+library(raster)
+library(maptools)
+library(rgdal)
+library(spatstat)
+library(sp)
+library(ggplot2)
+library(anytime)
+library(plyr)
+library(zoo)
+library(DT)
+library(CGPfunctions)
+library(shinyBS)
+library(geoshaper)
+library(ggthemes)
+library(rsconnect)
+library(shinycssloaders)
+library(shinyWidgets)
+library(BiocManager)
+library(rsconnect)
 
 # Reading the raw csv file as a tbl_df
 ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")

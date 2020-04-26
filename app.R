@@ -46,19 +46,16 @@ library(shinyWidgets)
 library(BiocManager)
 library(rsconnect)
 
-# Reading the raw csv file as a tbl_df
-ACLED_SA <- read_csv("Data/2016-01-01-2019-12-31-Southern_Asia.csv")
-ACLED_SA <- ACLED_SA %>%
-  mutate(event_date=parse_date(event_date, "%d %B %Y"))%>%
-  mutate(month=month(event_date)) %>%
-  mutate(monyear = as.Date(paste0(year,"-",month, "-01"),"%Y-%m-%d"))
 
-ACLED_SA <- subset(ACLED_SA,select=-c(notes))
-ACLED_SA$secondLocationID <- paste(as.character(ACLED_SA$data_id), "_selectedLayer", sep="")
-coordinates <- SpatialPointsDataFrame(ACLED_SA[,c('longitude', 'latitude')] , ACLED_SA)
 
 # Read in aspatial dataframe
 SA_df <- readRDS("Data/prepared_files/SA_df.rds")
+
+# data wrangling for calendar chart/ data explore
+
+ACLED_SA <- subset(SA_df,select=-c(notes))
+ACLED_SA$secondLocationID <- paste(as.character(ACLED_SA$data_id), "_selectedLayer", sep="")
+coordinates <- SpatialPointsDataFrame(ACLED_SA[,c('longitude', 'latitude')] , ACLED_SA)
 
 # Read in sf object
 SA_sf <- readRDS("Data/prepared_files/SA_sf.rds")
