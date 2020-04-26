@@ -393,6 +393,9 @@ home<-tabItem(
   fluidRow(
     column(12, align="center",
            h1("Welcome to ACLED point pattern app!"),
+           h3("Start exploring by clicking on one of the tabs on the left panel"),
+           p("Please refer to our user guide for more information."),
+           a(href="https://github.com/deniseadele/pointpatternACLED/blob/master/User%20Guide.pdf", "Click Here!"),
            div(style="display: inline-block;",img(src='home.png', width="100%"))
            )
   )
@@ -511,8 +514,8 @@ server <- function(input, output, session) {
             dplyr::mutate(`number of events_norm`= signif(`number of events`/area,2)) %>%
             dplyr::mutate(fatalities_norm= signif(fatalities/`number of events`,2)) %>%
             dplyr::ungroup(year,country,area) %>%
-            dplyr::mutate(year = factor(year)) #%>% 
-            #dplyr::rename(x = input$select_rank)
+            dplyr::mutate(year = factor(year))  
+
         
         if (input$normalise){
             SA_agg_country <- SA_agg_country %>% 
