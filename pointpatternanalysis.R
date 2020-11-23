@@ -41,11 +41,11 @@ SA_sp <- readRDS("Data/prepared_files/SA_sp.rds")
 
 
 # read in SA geopackage and convert to sp object
-PAK_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_PAK.gpkg"), layer="gadm36_PAK_1")
-BGD_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_BGD.gpkg"), layer="gadm36_BGD_1")
-LKA_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_LKA.gpkg"), layer="gadm36_LKA_1")
-NPL_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_NPL.gpkg"), layer="gadm36_NPL_1")
-IND_sh <- readOGR(dsn = paste0(here::here(), "/Data/geopackage/gadm36_IND.gpkg"), layer="gadm36_IND_1")
+PAK_sh <- readRDS("Data/prepared_files/PAK_sh.rds")
+BGD_sh <- readRDS("Data/prepared_files/BGD_sh.rds")
+LKA_sh <- readRDS("Data/prepared_files/LKA_sh.rds")
+NPL_sh <- readRDS("Data/prepared_files/NPL_sh.rds")
+IND_sh <- readRDS("Data/prepared_files/IND_sh.rds")
 
 # read in ppp objects
 PAK_ppp <- readRDS("Data/prepared_files/PAK_ppp.rds")
@@ -89,6 +89,38 @@ tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = "quantile", n = 20, pale
   tm_borders(alpha=.3, col = "black") +
   tm_fill(col="NAME_1", alpha=0, id="NAME_1", title= "State",legend.show=FALSE)
 tmap_leaflet(tmap_kd)
+
+
+
+pal2 <- colorNumeric("magma", values(ras),
+                    na.color = "transparent")
+col_class <- classIntervals(values(ras$layer), n = 5, style = "quantile")
+findColours(col_class, magma(5))
+
+pal<-colorBin(palette = "magma",                                 
+              domain = col_class$brks,                                  
+              bins =col_class$brks, pretty = FALSE,
+              na.color = "transparent")
+
+# USING LEAFLET
+leaflet(data=PAK_sh) %>%
+  addProviderTiles(providers$CartoDB.Positron, group = "CartoDB") %>%
+  addPolygons(color = "grey", fillColor = ~NAME_1, opacity = 1,fillOpacity = 0, weight=1,
+              highlight = highlightOptions(
+                weight = 3,
+                color = "black",
+                opacity = 1,
+                fillOpacity = 0,
+                bringToFront = TRUE),
+              label = ~NAME_1,
+              labelOptions = labelOptions(
+                style = list("font-weight" = "normal", padding = "3px 8px"),
+                textsize = "15px",
+                direction = "auto")
+              ) %>%
+  addRasterImage(ras, colors = pal, opacity = 0.8) %>%
+  addLegend(pal = pal, values = values(ras),
+            title = "kde of armed <br>conflict events")
 
 
 ### SECOND-ORDER ###
@@ -166,16 +198,19 @@ G_csr <- envelope(ppp_u_mark , Gest, nsim = 49)
 plot(G_csr)
 
 # ggplot
+title <- "Nearest-neighbour Distance: G function"
+
 Gcsr_df <- as.data.frame(G_csr)
-Gcsr_df2 <- Gcsr_df[-1,]
-colour=c("#d73027", "#ffffbf", "#91bfdb")
+#Gcsr_df <- Gcsr_df[-1,]
+colour=c("#0D657D","#ee770d","#D3D3D3")
 csr_plot <- ggplot(Gcsr_df2, aes(r, obs))+
   # plot observed value
   geom_line(colour=c("#4d4d4d"))+
   geom_line(aes(r,theo), colour="red", linetype = "dashed")+
-  geom_ribbon(aes(ymin=lo,ymax=hi),alpha=0.1, colour=c("#e0e0e0")) +
+  # plot simulation envelopes
+  geom_ribbon(aes(ymin=lo,ymax=hi),alpha=0.1, colour=c("#91bfdb")) +
   xlab("Distance r (km)") +
-  ylab("summary statistic") +
+  ylab("G(r)") +
   #theme(
   #  plot.title = element_text(size=14, face="bold.italic"),
   #  axis.title.x = element_text(size=16, face="bold"),
@@ -185,10 +220,50 @@ csr_plot <- ggplot(Gcsr_df2, aes(r, obs))+
   geom_rug(data=Gcsr_df2[Gcsr_df2$obs > Gcsr_df2$hi,], sides="b", colour=colour[1])  +
   geom_rug(data=Gcsr_df2[Gcsr_df2$obs < Gcsr_df2$lo,], sides="b", colour=colour[2]) +
   geom_rug(data=Gcsr_df2[Gcsr_df2$obs >= Gcsr_df2$lo & Gcsr_df2$obs <= Gcsr_df2$hi,], sides="b", color=colour[3]) +
-  theme_tufte()
+  theme_tufte()+
+  ggtitle(title)
+
+text1<-"Significant clustering"
+text2<-"Significant segregation"
+text3<-"Not significant clustering/segregation"
+
+# the below conditional statement is required to ensure that the labels (text1/2/3) are assigned to the correct traces
+if (nrow(Gcsr_df[Gcsr_df$obs > Gcsr_df$hi,])==0){ # absence of significant clustering
+  if (nrow(Gcsr_df[Gcsr_df$obs < Gcsr_df$lo,])==0){ # absence of significant segregation
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text3, traces = 4) %>%
+      rangeslider() 
+  }else if (nrow(Gcsr_df[Gcsr_df$obs >= Gcsr_df$lo & Gcsr_df$obs <= Gcsr_df$hi,])==0){ # absence of significant segregation
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      rangeslider() 
+  }else {
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text2, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider() 
+  }
+} else if (nrow(Gcsr_df[Gcsr_df$obs < Gcsr_df$lo,])==0){
+  if (nrow(Gcsr_df[Gcsr_df$obs >= Gcsr_df$lo & Gcsr_df$obs <= Gcsr_df$hi,])==0){
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      rangeslider() 
+  } else{
+    ggplotly(csr_plot, dynamicTicks=T) %>%
+      style(text = text1, traces = 4) %>%
+      style(text = text3, traces = 5) %>%
+      rangeslider()
+  }
+} else{
+  ggplotly(csr_plot, dynamicTicks=T) %>%
+    style(text = text1, traces = 4) %>%
+    style(text = text2, traces = 5) %>%
+    style(text = text3, traces = 6) %>%
+    rangeslider()
+  }
 
 
-ggplotly(csr_plot, dynamicTicks=T) 
+#ggplotly(csr_plot, dynamicTicks=T) 
 
 
 # F function

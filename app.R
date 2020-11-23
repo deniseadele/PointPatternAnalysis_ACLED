@@ -43,7 +43,6 @@ library(ggthemes)
 library(rsconnect)
 library(shinycssloaders)
 library(shinyWidgets)
-library(BiocManager)
 library(rsconnect)
 
 
@@ -672,13 +671,33 @@ server <- function(input, output, session) {
         
         ras <- raster(kd, crs="+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs")
         
-        shape <- spTransform(sh(), CRS=CRS("+init=epsg:24313 +proj=utm +zone=43 +a=6377301.243 +b=6356100.230165384 +towgs84=283,682,231,0,0,0,0 +units=km +no_defs"))
-        tmap_kd <- tm_shape(ras)+tm_raster(col="layer", style = input$select_interval, n = input$select_nclass, palette=viridisLite::magma(7)) +
-          tm_layout(frame = F, legend.format = list(format="g",digits=1)) +
-          tm_shape(shape) +
-          tm_borders(alpha=.3, col = "black") +
-          tm_fill(col="NAME_1", alpha=0, id="NAME_1", title= "State",legend.show=FALSE)
-        tmap_leaflet(tmap_kd)
+        
+        col_class <- classIntervals(values(ras$layer), n = input$select_nclass, style = input$select_interval)
+        findColours(col_class, magma(7))
+        
+        pal<-colorBin(palette = "magma",                                 
+                      domain = col_class$brks,                                  
+                      bins =col_class$brks, pretty = FALSE,
+                      na.color = "transparent")
+        
+        leaflet(data=ssh()) %>%
+          addProviderTiles(providers$CartoDB.Positron, group = "CartoDB") %>%
+          addPolygons(color = "grey", fillColor = ~NAME_1, opacity = 1,fillOpacity = 0, weight=1,
+                      highlight = highlightOptions(
+                        weight = 3,
+                        color = "black",
+                        opacity = 1,
+                        fillOpacity = 0,
+                        bringToFront = TRUE),
+                      label = ~NAME_1,
+                      labelOptions = labelOptions(
+                        style = list("font-weight" = "normal", padding = "3px 8px"),
+                        textsize = "15px",
+                        direction = "auto")
+          ) %>%
+          addRasterImage(ras, colors = pal, opacity = 0.8) %>%
+          addLegend(pal = pal, values = values(ras),
+                    title = "kde of armed <br>conflict events")
         
       })
     })
