@@ -1,6 +1,6 @@
 # pointpatternACLED
 ##### Point Pattern Analysis: Case Study on Armed Conflict in Southern Asia
-This repository stores the files for a project undertaken for the course ISSS608- Visual Analytics offered in SMU MITB
+This repository stores the files for a project undertaken for the course ISSS608- Visual Analytics offered in SMU MITB. Please view the R shiny application [here](https://deniseadele-chs.shinyapps.io/pointpatternACLED/).
 
 
 ## Setup
